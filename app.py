@@ -98,14 +98,15 @@ with tab_manual:
 
         item_code = st.text_input("item_code (품목코드) - 입력", value="")
 
+        product_name_ko = st.text_input("product_name_ko (단품명) - 입력", value="")
+        product_name_en = st.text_input("product_name_en (단품명_영문) - 입력", value="")
+   
         origin_country = st.selectbox(
             "origin_country (원산지, 예: KR, CN, VN) - 선택",
-            options=["", "KR", "CN", "VN"],
+            options=["", "KOREA", "CHINA", "VIETNAM"],
             index=0,
         )
 
-        product_name_ko = st.text_input("product_name_ko (단품명) - 입력", value="")
-        product_name_en = st.text_input("product_name_en (단품명_영문) - 입력", value="")
 
         pairs = brand_to_pairs.get(brand, []) if brand else []
         box_type_options = sorted({bt for bt, _ in pairs})

@@ -66,8 +66,8 @@
     "R_name_en": [560, 299]
         },
   "icon_pos": {
-    "L_origin": [463, 137, 60, 8],
-    "R_origin": [717, 137, 60, 8]        },
+    "L_origin": [463, 139, 60, 6],
+    "R_origin": [717, 139, 60, 6]        },
         "font_main_size": 25,
         "font_sub_size": 8
       },
