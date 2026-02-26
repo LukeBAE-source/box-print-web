@@ -216,13 +216,59 @@ with tab_manual:
 
 with tab_upload:
     st.write("box_data.xlsx 파일을 업로드하고 실행을 누르면 결과를 다운로드할 수 있습니다.")
-    uploaded = st.file_uploader("box_data.xlsx 업로드", type=["xlsx"])
-    run_btn = st.button("실행(업로드)", type="primary", disabled=(uploaded is None))
 
-    if run_btn:
-        ts = time.strftime("%Y%m%d_%H%M%S")
-        excel_path = TMP_DIR / f"box_data_{ts}.xlsx"
-        with open(excel_path, "wb") as f:
-            f.write(uploaded.getbuffer())
+    left_u, right_u = st.columns([1, 1], gap="large")
 
-        render_and_zip(excel_path, ts)
+    with left_u:
+        uploaded = st.file_uploader("box_data.xlsx 업로드", type=["xlsx"])
+
+        run_btn = st.button(
+            "실행(업로드)",
+            type="primary",
+            disabled=(uploaded is None),
+        )
+
+        if run_btn:
+            ts = time.strftime("%Y%m%d_%H%M%S")
+            excel_path = TMP_DIR / f"box_data_{ts}.xlsx"
+
+            with open(excel_path, "wb") as f:
+                f.write(uploaded.getbuffer())
+
+            render_and_zip(excel_path, ts)
+
+    with right_u:
+        st.subheader("사용법")
+
+        st.markdown(
+            """
+            ### 📌 업로드 방법
+            
+            1. **box_data.xlsx** 파일을 업로드합니다.
+            2. **실행(업로드)** 버튼을 클릭합니다.
+            3. 렌더링 완료 후 ZIP 파일 다운로드 버튼이 나타납니다.
+
+            ---
+            ### 📄 엑셀 필수 컬럼
+
+            엑셀에는 아래 컬럼이 반드시 포함되어야 합니다:
+
+            - brand  
+            - box_type  
+            - box_group  
+            - item_code  
+            - product_name_ko  
+            - product_name_en  
+            - origin_country  
+
+            ---
+            ### ⚠ 주의사항
+
+            - 브랜드별 템플릿은  
+              `templates/<brand>/<box_type>_<box_group>.pdf`  
+              형식으로 존재해야 합니다.
+            - 좌표 정보는  
+              `coords/coords.json`에 등록되어 있어야 합니다.
+            - 여러 행이 있을 경우 PDF 여러 개가 생성되어 ZIP으로 다운로드됩니다.
+            """
+        )
