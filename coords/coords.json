@@ -1,0 +1,1100 @@
+{
+  "meta": {
+    "generated_at": "2026-02-13 11:45:32",
+    "template_root": "templates",
+    "note": "templates/<brand>/*.pdf 를 스캔해서 templates.<brand>.<template_key> 뼈대를 생성한 파일입니다."
+  },
+  "defaults": {
+    "iloom": {
+      "cover_rects": [],
+      "pos": {},
+      "icon_pos": {},
+      "font_main_size": 26,
+      "font_sub_size": 12
+    },
+    "desker": {
+      "cover_rects": [],
+      "pos": {},
+      "icon_pos": {},
+      "font_main_size": 22,
+      "font_sub_size": 12
+    },
+    "sloubed": {
+      "cover_rects": [],
+      "pos": {},
+      "icon_pos": {},
+      "font_main_size": 26,
+      "font_sub_size": 12
+    }
+  },
+  "templates": {
+    "iloom": {
+      "basic_l": {
+         "cover_rects": [
+    [148, 297, 166, 56],
+    [543, 297, 166, 56],
+    [482, 118, 36, 5],
+    [745, 118, 36, 5]
+],
+        "pos": {
+    "L_item_code": [148, 334],
+    "L_name_ko": [148, 315],
+    "L_name_en": [148, 299],
+    "R_item_code": [543, 331],
+    "R_name_ko": [543, 312],
+    "R_name_en": [543, 299]
+        },
+  "icon_pos": {
+    "L_origin": [484, 118, 36, 5],
+    "R_origin": [745, 118, 36, 5]        },
+        "font_main_size": 25,
+        "font_sub_size": 8
+},
+      "basic_m": {
+         "cover_rects": [
+    [180, 295, 160, 55],
+    [560, 295, 160, 55],
+    [463, 139, 60, 6],
+    [717, 139, 60, 6]
+],
+        "pos": {
+    "L_item_code": [180, 330],
+    "L_name_ko": [180, 311],
+    "L_name_en": [180, 297],
+    "R_item_code": [560, 330],
+    "R_name_ko": [560, 311],
+    "R_name_en": [560, 299]
+        },
+  "icon_pos": {
+    "L_origin": [463, 137, 60, 8],
+    "R_origin": [717, 137, 60, 8]        },
+        "font_main_size": 25,
+        "font_sub_size": 8
+      },
+      "basic_s": {
+         "cover_rects": [
+    [197, 285, 160, 55],
+    [568, 285, 160, 55],
+    [437, 149, 60, 6],
+    [685, 149, 60, 6]
+],
+        "pos": {
+    "L_item_code": [197, 318],
+    "L_name_ko": [197, 299],
+    "L_name_en": [197, 287],
+    "R_item_code": [568, 318],
+    "R_name_ko": [568, 299],
+    "R_name_en": [568, 287]
+        },
+  "icon_pos": {
+    "L_origin": [437, 149, 58, 6],
+    "R_origin": [685, 149, 58, 6]        },
+        "font_main_size": 26,
+        "font_sub_size": 8
+      },
+      "compact_m": {
+         "cover_rects": [
+    [156, 213, 160, 55],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [658, 212, 97, 10]
+  ],
+  "pos": {
+    "L_item_code": [156, 236],
+    "L_name_ko": [156, 213],
+    "L_name_en": [0, 0],
+    "R_item_code": [0, 0],
+    "R_name_ko": [0, 0],
+    "R_name_en": [0, 0]
+  },
+  "icon_pos": {
+    "L_origin": [658, 212, 97, 12],
+    "R_origin": [0, 0, 0, 0]
+  },
+
+  "hide": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_hide": {
+    "R_origin": true
+  },
+
+  "font_main_size": 26,
+  "font_sub_size": 11
+},
+      "long_ll": {
+         "cover_rects": [
+    [209, 348, 187, 13],
+    [545, 438, 187, 13],
+    [787, 348, 35, 4],
+    [120, 445, 33, 4],
+    [209, 392, 187, 15],
+    [209, 482, 187, 15]
+],
+        "pos": {
+    "L_item_code": [209, 349],
+    "L_name_ko": [280, 351],
+    "L_name_en": [0, 0],
+    "L1_item_code": [209, 393],
+    "L1_name_ko": [280, 395],
+    "L1_name_en": [0, 0],
+    "L2_item_code": [209, 483],
+    "L2_name_ko": [280, 485],
+    "L2_name_en": [0, 0],
+    "R_item_code": [731, 450],
+    "R_name_ko": [655, 448],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [789, 348, 33, 4],
+    "R_origin": [120, 447, 33, 4]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 15,
+        "font_sub_size": 10
+},
+      "long_lm": {
+ "cover_rects": [
+    [221, 371, 90, 8],
+    [646, 453, 90, 8],
+    [791, 370, 35, 3],
+    [132, 459, 35, 5],
+    [221, 410, 185, 13],
+    [221, 491, 185, 13]
+],
+        "pos": {
+    "L_item_code": [221, 371],
+    "L_name_ko": [291, 372],
+    "L_name_en": [0, 0],
+    "L1_item_code": [221, 410],
+    "L1_name_ko": [291, 411],
+    "L1_name_en": [0, 0],
+    "L2_item_code": [221, 491],
+    "L2_name_ko": [291, 494],
+    "L2_name_en": [0, 0],
+    "R_item_code": [738, 463],
+    "R_name_ko": [666, 461],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [791, 370, 35, 3],
+    "R_origin": [132, 459, 33, 3]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 15,
+        "font_sub_size": 10
+},
+      "long_ls": {
+ "cover_rects": [
+    [216, 430, 187, 13],
+    [0, 0, 0, 0],
+    [805, 402, 16, 2],
+    [129, 470, 16, 2],
+    [216, 495, 187, 13],
+    [0, 0, 0, 0]
+],
+        "pos": {
+    "L_item_code": [216, 431],
+    "L_name_ko": [290, 433],
+    "L_name_en": [0, 0],
+    "L1_item_code": [216, 496],
+    "L1_name_ko": [290, 498],
+    "L1_name_en": [0, 0],
+    "L2_item_code": [0, 0],
+    "L2_name_ko": [0, 0],
+    "L2_name_en": [0, 0],
+    "R_item_code": [0, 0],
+    "R_name_ko": [0, 0],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [805, 402, 16, 2],
+    "R_origin": [129, 470, 16, 2]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 15,
+        "font_sub_size": 8
+},
+      "long_mm": {
+ "cover_rects": [
+    [222, 378, 150, 10],
+    [572, 454, 150, 10],
+    [752, 373, 57, 7],
+    [135, 463, 55, 7],
+    [222, 416, 150, 10],
+    [222, 492, 150, 10]
+],
+        "pos": {
+    "L_item_code": [222, 378],
+    "L_name_ko": [285, 380],
+    "L_name_en": [0, 0],
+    "L1_item_code": [222, 416],
+    "L1_name_ko": [285, 418],
+    "L1_name_en": [0, 0],
+    "L2_item_code": [222, 492],
+    "L2_name_ko": [285, 494],
+    "L2_name_en": [0, 0],
+    "R_item_code": [721, 465],
+    "R_name_ko": [660, 463],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [752, 373, 57, 7],
+    "R_origin": [135, 463, 55, 7]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 13,
+        "font_sub_size": 7
+},
+      "long_ms": {
+ "cover_rects": [
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [778, 367, 27, 4],
+    [153, 437, 27, 4],
+    [236, 398, 146, 11],
+    [236, 461, 146, 11]
+],
+        "pos": {
+    "L_item_code": [0, 0],
+    "L_name_ko": [0, 0],
+    "L_name_en": [0, 0],
+    "L1_item_code": [236, 399],
+    "L1_name_ko": [296, 401],
+    "L1_name_en": [0, 0],
+    "L2_item_code": [236, 461],
+    "L2_name_ko": [296, 463],
+    "L2_name_en": [0, 0],
+    "R_item_code": [0, 0],
+    "R_name_ko": [0, 0],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [780, 367, 27, 4],
+    "R_origin": [153, 437, 27, 4]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 12,
+        "font_sub_size": 7
+},
+      "long_ss": {
+ "cover_rects": [
+    [248, 304, 170, 12],
+    [456, 414, 170, 12],
+    [662, 300, 60, 8],
+    [153, 423, 60, 8],
+    [248, 358, 170, 12],
+    [248, 467, 170, 12]
+],
+        "pos": {
+    "L_item_code": [249, 306],
+    "L_name_ko": [315, 308],
+    "L_name_en": [0, 0],
+    "L1_item_code": [249, 359],
+    "L1_name_ko": [315, 361],
+    "L1_name_en": [0, 0],
+    "L2_item_code": [249, 468],
+    "L2_name_ko": [315, 470],
+    "L2_name_en": [0, 0],
+    "R_item_code": [626, 426],
+    "R_name_ko": [560, 424],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [662, 300, 60, 8],
+    "R_origin": [153, 423, 60, 8]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 13,
+        "font_sub_size": 7
+},
+      "panel_ll": {
+ "cover_rects": [
+    [240, 132, 280, 12],
+    [443, 487, 280, 12],
+    [758, 167, 30, 3],
+    [0, 0, 0, 0],
+    [176, 167, 136, 45],
+    [0, 0, 0, 0]
+],
+        "pos": {
+    "L_item_code": [240, 134],
+    "L_name_ko": [335, 136],
+    "L_name_en": [420, 135],
+    "L1_item_code": [176, 196],
+    "L1_name_ko": [176, 179],
+    "L1_name_en": [176, 168],
+    "L2_item_code": [0, 0],
+    "L2_name_ko": [0, 0],
+    "L2_name_en": [0, 0],
+    "R_item_code": [721, 498],
+    "R_name_ko": [630, 496],
+    "R_name_en": [540, 496]
+        },
+  "icon_pos": {
+    "L_origin": [758, 167, 30, 3],
+    "R_origin": [0, 0, 0, 0]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 19,
+        "font_sub_size": 9
+},
+      "panel_lm": {
+ "cover_rects": [
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [773, 178, 30, 3],
+    [0, 0, 0, 0],
+    [158, 177, 140, 47],
+    [0, 0, 0, 0]
+],
+        "pos": {
+    "L_item_code": [0, 0],
+    "L_name_ko": [0, 0],
+    "L_name_en": [0, 0],
+    "L1_item_code": [158, 208],
+    "L1_name_ko": [158, 191],
+    "L1_name_en": [158, 178],
+    "L2_item_code": [0, 0],
+    "L2_name_ko": [0, 0],
+    "L2_name_en": [0, 0],
+    "R_item_code": [0, 0],
+    "R_name_ko": [0, 0],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [773, 177, 30, 3],
+    "R_origin": [0, 0, 0, 0]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 18,
+        "font_sub_size": 7
+},
+      "panel_ls": {
+ "cover_rects": [
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [787, 179, 32, 4],
+    [0, 0, 0, 0],
+    [142, 179, 150, 50],
+    [0, 0, 0, 0]
+],
+        "pos": {
+    "L_item_code": [0, 0],
+    "L_name_ko": [0, 0],
+    "L_name_en": [0, 0],
+    "L1_item_code": [142, 209],
+    "L1_name_ko": [142, 192],
+    "L1_name_en": [142, 179],
+    "L2_item_code": [0, 0],
+    "L2_name_ko": [0, 0],
+    "L2_name_en": [0, 0],
+    "R_item_code": [0, 0],
+    "R_name_ko": [0, 0],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [787, 179, 32, 4],
+    "R_origin": [0, 0, 0, 0]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 19,
+        "font_sub_size": 8
+},
+      "panel_mm": {
+ "cover_rects": [
+    [241, 202, 225, 10],
+    [503, 498, 225, 10],
+    [731, 240, 50, 6],
+    [0, 0, 0, 0],
+    [189, 241, 130, 45],
+    [0, 0, 0, 0]
+],
+        "pos": {
+    "L_item_code": [241, 203],
+    "L_name_ko": [315, 205],
+    "L_name_en": [0, 0],
+    "L1_item_code": [189, 269],
+    "L1_name_ko": [189, 252],
+    "L1_name_en": [189, 241],
+    "L2_item_code": [0, 0],
+    "L2_name_ko": [0, 0],
+    "L2_name_en": [0, 0],
+    "R_item_code": [726, 508],
+    "R_name_ko": [650, 506],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [731, 240, 50, 6],
+    "R_origin": [0, 0, 0, 0]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 13,
+        "font_sub_size": 7
+},
+      "panel_ms": {
+ "cover_rects": [
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [752, 248, 53, 6],
+    [0, 0, 0, 0],
+    [165, 247, 142, 50],
+    [0, 0, 0, 0]
+],
+        "pos": {
+    "L_item_code": [0, 0],
+    "L_name_ko": [0, 0],
+    "L_name_en": [0, 0],
+    "L1_item_code": [165, 278],
+    "L1_name_ko": [165, 260],
+    "L1_name_en": [165, 248],
+    "L2_item_code": [0, 0],
+    "L2_name_ko": [0, 0],
+    "L2_name_en": [0, 0],
+    "R_item_code": [0, 0],
+    "R_name_ko": [0, 0],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [752, 247, 51, 6],
+    "R_origin": [0, 0, 0, 0]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 13,
+        "font_sub_size": 7
+},
+      "panel_ss": {
+ "cover_rects": [
+    [287, 145, 280, 12],
+    [430, 473, 280, 12],
+    [705, 201, 56, 6],
+    [0, 0, 0, 0],
+    [234, 201, 151, 50],
+    [0, 0, 0, 0]
+],
+        "pos": {
+    "L_item_code": [287, 145],
+    "L_name_ko": [375, 147],
+    "L_name_en": [0, 0],
+    "L1_item_code": [234, 232],
+    "L1_name_ko": [234, 216],
+    "L1_name_en": [234, 202],
+    "L2_item_code": [0, 0],
+    "L2_name_ko": [0, 0],
+    "L2_name_en": [0, 0],
+    "R_item_code": [707, 484],
+    "R_name_ko": [620, 482],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [705, 201, 56, 6],
+    "R_origin": [0, 0, 0, 0]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 13,
+        "font_sub_size": 7
+}
+    },
+    "desker": {
+      "basic_l": {
+         "cover_rects": [
+    [177, 80, 123, 50],
+    [550, 80, 123, 50],
+    [492, 374, 36, 5],
+    [0, 0, 0, 0]
+],
+        "pos": {
+    "L_item_code": [177, 82],
+    "L_name_ko": [177, 117],
+    "L_name_en": [177, 104],
+    "R_item_code": [550, 82],
+    "R_name_ko": [550, 117],
+    "R_name_en": [550, 104]
+        },
+  "icon_pos": {
+    "L_origin": [492, 374, 34, 5],
+    "R_origin": [0, 0, 0, 0]        },
+        "font_main_size": 15,
+        "font_sub_size": 7
+},
+      "basic_m": {
+         "cover_rects": [
+    [185, 44, 106, 42],
+    [547, 45, 106, 42],
+    [468, 351, 50, 6],
+    [0, 0, 0, 0]
+],
+        "pos": {
+    "L_item_code": [185, 45],
+    "L_name_ko": [185, 77],
+    "L_name_en": [185, 65],
+    "R_item_code": [547, 45],
+    "R_name_ko": [547, 77],
+    "R_name_en": [547, 65]
+        },
+  "icon_pos": {
+    "L_origin": [468, 351, 47, 6],
+    "R_origin": [0, 0, 0, 0]        },
+        "font_main_size": 15,
+        "font_sub_size": 7
+},
+      "basic_s": {
+         "cover_rects": [
+    [211, 99, 115, 50],
+    [577, 99, 115, 50],
+    [479, 361, 42, 6],
+    [0, 0, 0, 0]
+],
+        "pos": {
+    "L_item_code": [211, 99],
+    "L_name_ko": [211, 130],
+    "L_name_en": [211, 119],
+    "R_item_code": [577, 99],
+    "R_name_ko": [577, 130],
+    "R_name_en": [577, 119]
+        },
+  "icon_pos": {
+    "L_origin": [480, 361, 42, 6],
+    "R_origin": [0, 0, 0, 0]        },
+        "font_main_size": 16,
+        "font_sub_size": 8
+},
+      "long_l": {
+ "cover_rects": [
+    [263, 386, 95, 13],
+    [600, 479, 100, 12],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [370, 386, 98, 13],
+    [274, 439, 65, 10]
+],
+        "pos": {
+    "L_item_code": [263, 387],
+    "L_name_ko": [0, 0],
+    "L_name_en": [0, 0],
+    "L1_item_code": [0, 0],
+    "L1_name_ko": [370, 394],
+    "L1_name_en": [370, 386],
+    "L2_item_code": [0, 0],
+    "L2_name_ko": [274, 444],
+    "L2_name_en": [274, 439],
+    "R_item_code": [697, 491],
+    "R_name_ko": [0, 0],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [0, 0, 0, 0],
+    "R_origin": [0, 0, 0, 0]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 10,
+        "font_sub_size": 5
+},
+      "long_m": {
+ "cover_rects": [
+    [314, 367, 118, 16],
+    [541, 470, 120, 20],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [446, 367, 120, 15],
+    [380, 427, 90, 13]
+],
+        "pos": {
+    "L_item_code": [314, 367],
+    "L_name_ko": [0, 0],
+    "L_name_en": [0, 0],
+    "L1_item_code": [0, 0],
+    "L1_name_ko": [446, 378],
+    "L1_name_en": [446, 368],
+    "L2_item_code": [0, 0],
+    "L2_name_ko": [380, 435],
+    "L2_name_en": [380, 427],
+    "R_item_code": [661, 486],
+    "R_name_ko": [0, 0],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [0, 0, 0, 0],
+    "R_origin": [0, 0, 0, 0]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 18,
+        "font_sub_size": 8
+},
+      "long_s": {
+ "cover_rects": [
+    [284, 378, 93, 13],
+    [558, 466, 100, 13],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [388, 378, 95, 13],
+    [374, 427, 95, 15]
+],
+        "pos": {
+    "L_item_code": [284, 378],
+    "L_name_ko": [0, 0],
+    "L_name_en": [0, 0],
+    "L1_item_code": [0, 0],
+    "L1_name_ko": [388, 386],
+    "L1_name_en": [388, 378],
+    "L2_item_code": [0, 0],
+    "L2_name_ko": [374, 436],
+    "L2_name_en": [374, 427],
+    "R_item_code": [651, 479],
+    "R_name_ko": [0, 0],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [0, 0, 0, 0],
+    "R_origin": [0, 0, 0, 0]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 15,
+        "font_sub_size": 5
+},
+      "panel_l": {
+ "cover_rects": [
+    [188, 152, 169, 50],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [332, 105, 117, 18],
+    [465, 105, 112, 18]
+],
+        "pos": {
+    "L_item_code": [188, 152],
+    "L_name_ko": [188, 191],
+    "L_name_en": [188, 178],
+    "L1_item_code": [332, 106],
+    "L1_name_ko": [0, 0],
+    "L1_name_en": [0, 0],
+    "L2_item_code": [0, 0],
+    "L2_name_ko": [465, 116],
+    "L2_name_en": [465, 106],
+    "R_item_code": [0, 0],
+    "R_name_ko": [0, 0],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [0, 0, 0, 0],
+    "R_origin": [0, 0, 0, 0]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 20,
+        "font_sub_size": 8
+},
+      "panel_m": {
+ "cover_rects": [
+    [199, 130, 165, 50],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [310, 88, 94, 13],
+    [417, 89, 90, 13]
+],
+        "pos": {
+    "L_item_code": [199, 130],
+    "L_name_ko": [199, 167],
+    "L_name_en": [199, 154],
+    "L1_item_code": [310, 88],
+    "L1_name_ko": [0, 0],
+    "L1_name_en": [0, 0],
+    "L2_item_code": [0, 0],
+    "L2_name_ko": [417, 97],
+    "L2_name_en": [417, 89],
+    "R_item_code": [0, 0],
+    "R_name_ko": [0, 0],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [0, 0, 0, 0],
+    "R_origin": [0, 0, 0, 0]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 16,
+        "font_sub_size": 7
+},
+      "panel_s": {
+ "cover_rects": [
+    [247, 119, 140, 50],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [346, 68, 81, 13],
+    [437, 68, 92, 13]
+],
+        "pos": {
+    "L_item_code": [247, 119],
+    "L_name_ko": [247, 155],
+    "L_name_en": [247, 140],
+    "L1_item_code": [345, 68],
+    "L1_name_ko": [0, 0],
+    "L1_name_en": [0, 0],
+    "L2_item_code": [0, 0],
+    "L2_name_ko": [437, 75],
+    "L2_name_en": [437, 68],
+    "R_item_code": [0, 0],
+    "R_name_ko": [0, 0],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [0, 0, 0, 0],
+    "R_origin": [0, 0, 0, 0]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 13,
+        "font_sub_size": 6
+}
+    },
+    "sloubed": {
+      "basic_m": {
+         "cover_rects": [
+    [100, 332, 185, 40],
+    [472, 332, 185, 40],
+    [385, 165, 50, 7],
+    [634, 165, 50, 7]
+],
+        "pos": {
+    "L_item_code": [100, 351],
+    "L_name_ko": [100, 332],
+    "L_name_en": [0, 0],
+    "R_item_code": [472, 351],
+    "R_name_ko": [472, 332],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [386, 165, 50, 7],
+    "R_origin": [633, 165, 50, 7]        },
+        "font_main_size": 26,
+        "font_sub_size": 12
+},
+      "basic_s": {
+         "cover_rects": [
+    [94, 314, 188, 40],
+    [475, 314, 188, 40],
+    [386, 143, 52, 7],
+    [640, 143, 52, 7]
+],
+        "pos": {
+    "L_item_code": [94, 335],
+    "L_name_ko": [94, 314],
+    "L_name_en": [0, 0],
+    "R_item_code": [475, 335],
+    "R_name_ko": [475, 314],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [386, 143, 52, 7],
+    "R_origin": [640, 143, 52, 7]        },
+        "font_main_size": 23,
+        "font_sub_size": 12
+},
+      "lid_m": {
+ "cover_rects": [
+    [148, 180, 140, 30],
+    [170, 471, 115, 10],
+    [653, 166, 22, 3],
+    [0, 0, 0, 0],
+    [542, 140, 187, 13],
+    [0, 0, 0, 0]
+],
+        "pos": {
+    "L_item_code": [148, 180],
+    "L_name_ko": [0, 0],
+    "L_name_en": [0, 0],
+    "L1_item_code": [0, 0],
+    "L1_name_ko": [542, 145],
+    "L1_name_en": [0, 0],
+    "L2_item_code": [0, 0],
+    "L2_name_ko": [0, 0],
+    "L2_name_en": [0, 0],
+    "R_item_code": [0, 0],
+    "R_name_ko": [286, 479],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [653, 166, 22, 3],
+    "R_origin": [0, 0, 0, 0]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 15,
+        "font_sub_size": 6
+},
+      "long_m": {
+ "cover_rects": [
+    [253, 351, 200, 13],
+    [0, 0, 0, 0],
+    [715, 353, 49, 5],
+    [715, 434, 49, 5],
+    [253, 392, 200, 13],
+    [253, 433, 200, 10],
+    [253, 474, 200, 10]
+],
+        "pos": {
+    "L_item_code": [253, 351],
+    "L_name_ko": [332, 353],
+    "L_name_en": [0, 0],
+    "L1_item_code": [253, 392],
+    "L1_name_ko": [332, 394],
+    "L1_name_en": [0, 0],
+    "L2_item_code": [253, 433],
+    "L2_name_ko": [332, 435],
+    "L2_name_en": [0, 0],
+    "L3_item_code": [253, 474],
+    "L3_name_ko": [332, 476],
+    "L3_name_en": [0, 0],
+    "R_item_code": [0, 0],
+    "R_name_ko": [0, 0],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [715, 353, 49, 6],
+    "R_origin": [715, 434, 49, 6]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": false
+  },
+        "font_main_size": 12,
+        "font_sub_size": 6
+},
+      "panel_m": {
+ "cover_rects": [
+    [129, 192, 180, 40],
+    [161, 489, 120, 10],
+    [649, 192, 50, 7],
+    [0, 0, 0, 0],
+    [546, 156, 120, 10],
+    [0, 0, 0, 0]
+],
+        "pos": {
+    "L_item_code": [129, 211],
+    "L_name_ko": [129, 192],
+    "L_name_en": [0, 0],
+    "L1_item_code": [0, 0],
+    "L1_name_ko": [547, 158],
+    "L1_name_en": [0, 0],
+    "L2_item_code": [0, 0],
+    "L2_name_ko": [0, 0],
+    "L2_name_en": [0, 0],
+    "R_item_code": [0, 0],
+    "R_name_ko": [280, 496],
+    "R_name_en": [0, 0]
+        },
+  "icon_pos": {
+    "L_origin": [649, 192, 48, 7],
+    "R_origin": [0, 0, 0, 0]
+        },
+ "rotate_180": {
+    "R_item_code": true,
+    "R_name_ko": true,
+    "R_name_en": true
+  },
+
+  "icon_rotate_180": {
+    "R_origin": true
+  },
+        "font_main_size": 18,
+        "font_sub_size": 8
+}
+    }
+  },
+  "template_files": {
+    "iloom": {
+      "basic_l": "BASIC_L.pdf",
+      "basic_m": "BASIC_M.pdf",
+      "basic_s": "BASIC_S.pdf",
+      "compact_m": "COMPACT_M.pdf",
+      "long_ll": "LONG_LL.pdf",
+      "long_lm": "LONG_LM.pdf",
+      "long_ls": "LONG_LS.pdf",
+      "long_mm": "LONG_MM.pdf",
+      "long_ms": "LONG_MS.pdf",
+      "long_ss": "LONG_SS.pdf",
+      "panel_ll": "PANEL_LL.pdf",
+      "panel_lm": "PANEL_LM.pdf",
+      "panel_ls": "PANEL_LS.pdf",
+      "panel_mm": "PANEL_MM.pdf",
+      "panel_ms": "PANEL_MS.pdf",
+      "panel_ss": "PANEL_SS.pdf"
+    },
+    "desker": {
+      "basic_l": "BASIC_L.pdf",
+      "basic_m": "BASIC_M.pdf",
+      "basic_s": "BASIC_S.pdf",
+      "long_l": "LONG_L.pdf",
+      "long_m": "LONG_M.pdf",
+      "long_s": "LONG_S.pdf",
+      "panel_l": "PANEL_L.pdf",
+      "panel_m": "PANEL_M.pdf",
+      "panel_s": "PANEL_S.pdf"
+    },
+    "sloubed": {
+      "basic_m": "BASIC_M.pdf",
+      "basic_s": "BASIC_S.pdf",
+      "lid_m": "LID_M.pdf",
+      "long_m": "LONG_M.pdf",
+      "panel_m": "PANEL_M.pdf"
+    }
+  }
+}
