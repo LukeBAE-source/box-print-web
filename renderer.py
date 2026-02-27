@@ -66,17 +66,43 @@ def load_coords(coords_json_path: str = COORDS_JSON_PATH):
     return defaults, template_coords
 
 def get_icon_path(country: str, icon_dir: str = ICON_DIR) -> str:
-    """Resolve origin icon path from ICON_DIR.
-
-    - Input can be short code (KR/CN/VN) or full name (KOREA/CHINA/VIETNAM), any case.
-    - Tries multiple filename candidates (as-is/upper/lower) and finally a
-      case-insensitive directory scan so files like 'icon_vietnam.png' work even
-      when the input is 'VIETNAM'.
+    """
+    icons 폴더에서 icon_<country>.png를 대/소문자 무관하게 찾는다.
+    - 예: icon_vietnam.png, icon_VIETNAM.png 모두 허용
+    - 공백은 제거하여 비교
+    반환: 찾으면 파일 경로(str), 못 찾으면 "" (빈 문자열)
     """
     raw = re.sub(r"\s+", "", str(country or "")).strip()
     if not raw:
-        return os.path.join(icon_dir, "icon_.png")  # non-existing sentinel
+        return ""
 
+    # 1) 흔한 변형 먼저 직접 체크 (빠름)
+    candidates = [
+        f"icon_{raw}.png",
+        f"icon_{raw.upper()}.png",
+        f"icon_{raw.lower()}.png",
+        f"icon_{raw.title()}.png",
+    ]
+    for fn in candidates:
+        p = os.path.join(icon_dir, fn)
+        if os.path.exists(p):
+            return p
+
+    # 2) icons 폴더를 스캔해서 케이스-인센서티브 매칭 (확실)
+    try:
+        want = raw.lower()
+        for fn in os.listdir(icon_dir):
+            if not fn.lower().endswith(".png"):
+                continue
+            if not fn.lower().startswith("icon_"):
+                continue
+            key = fn[5:-4]  # "icon_" 제거, ".png" 제거
+            if key.lower() == want:
+                return os.path.join(icon_dir, fn)
+    except Exception:
+        pass
+
+    return ""
     raw_u = raw.upper()
     raw_l = raw.lower()
 
@@ -241,7 +267,7 @@ def make_overlay_pdf(overlay_path: str, page_w: float, page_h: float, cfg: dict,
     origin = str(row.get("origin_country", "")).strip()
     ip = get_icon_path(origin, icon_dir=icon_dir)
 
-    if os.path.exists(ip):
+    if ip and os.path.exists(ip):
         for k in ("L_origin", "R_origin", "origin"):
             if k not in icon_pos:
                 continue
