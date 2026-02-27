@@ -38,6 +38,33 @@ tab_manual, tab_upload = st.tabs(["개별 품목 입력", "엑셀 업로드"])
 
 def render_and_zip(excel_path: Path, ts: str):
     """공통: renderer 실행 후 zip 생성/다운로드 버튼 제공"""
+
+    # 업로드 엑셀의 origin_country 값이 icons 폴더의 icon_*.png와 매칭되는지 사전 점검 (미매칭 시 텍스트로 대체 출력될 수 있음)
+    try:
+        _icon_keys_norm = {
+            p.stem.replace("icon_", "", 1).strip().lower()
+            for p in ICONS_DIR.glob("icon_*.png")
+            if p.is_file()
+        }
+        df_check = pd.read_excel(excel_path)
+        if "origin_country" in df_check.columns:
+            def _norm(v):
+                if pd.isna(v):
+                    return ""
+                return str(v).strip().lower()
+
+            raw_vals = sorted({str(v).strip() for v in df_check["origin_country"].dropna().unique()})
+            missing = [v for v in raw_vals if _norm(v) and _norm(v) not in _icon_keys_norm]
+            if missing:
+                st.warning(
+                    "origin_country 값 중 icons 폴더에 대응하는 icon_*.png가 없는 항목이 있습니다. "
+                    "해당 항목은 아이콘 대신 텍스트로 표시될 수 있습니다: "
+                    + ", ".join(missing)
+                )
+    except Exception:
+        # 검증 실패는 렌더링을 막지 않음
+        pass
+
     with st.spinner("렌더링 중..."):
         out_paths = run_render(
             excel_path=str(excel_path),
@@ -101,9 +128,17 @@ with tab_manual:
         product_name_ko = st.text_input("product_name_ko (단품명) - 입력", value="")
         product_name_en = st.text_input("product_name_en (단품명_영문) - 입력", value="")
    
+        # icons 폴더에 있는 icon_*.png를 스캔해서 원산지 옵션 자동 생성
+        _icon_keys = sorted([
+            p.stem.replace("icon_", "", 1)
+            for p in ICONS_DIR.glob("icon_*.png")
+            if p.is_file()
+        ])
+        _origin_options = [""] + [k.upper() for k in _icon_keys]
+
         origin_country = st.selectbox(
-            "origin_country (원산지, 예: KR, CN, VN) - 선택",
-            options=["", "KOREA", "CHINA", "VIETNAM"],
+            "origin_country (원산지) - 선택",
+            options=_origin_options,
             index=0,
         )
 

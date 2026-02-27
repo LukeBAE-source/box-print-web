@@ -66,8 +66,57 @@ def load_coords(coords_json_path: str = COORDS_JSON_PATH):
     return defaults, template_coords
 
 def get_icon_path(country: str, icon_dir: str = ICON_DIR) -> str:
-    c = re.sub(r"\s+", "", str(country or "")).strip().upper()
-    return os.path.join(icon_dir, f"icon_{c}.png")
+    """Resolve origin icon path from ICON_DIR.
+
+    - Input can be short code (KR/CN/VN) or full name (KOREA/CHINA/VIETNAM), any case.
+    - Tries multiple filename candidates (as-is/upper/lower) and finally a
+      case-insensitive directory scan so files like 'icon_vietnam.png' work even
+      when the input is 'VIETNAM'.
+    """
+    raw = re.sub(r"\s+", "", str(country or "")).strip()
+    if not raw:
+        return os.path.join(icon_dir, "icon_.png")  # non-existing sentinel
+
+    raw_u = raw.upper()
+    raw_l = raw.lower()
+
+    # Minimal alias map (extend if needed)
+    alias_map = {
+        "KOREA": "KR",
+        "SOUTHKOREA": "KR",
+        "CHINA": "CN",
+        "PRC": "CN",
+        "VIETNAM": "VN",
+    }
+    alias_key = re.sub(r"[^A-Z0-9]", "", raw_u)
+    alias = alias_map.get(alias_key)
+
+    candidates = [
+        f"icon_{raw}.png",
+        f"icon_{raw_u}.png",
+        f"icon_{raw_l}.png",
+    ]
+    if alias:
+        candidates.extend([f"icon_{alias}.png", f"icon_{alias.lower()}.png", f"icon_{alias.upper()}.png"])
+
+    # 1) direct candidates
+    for fn in candidates:
+        p = os.path.join(icon_dir, fn)
+        if os.path.exists(p):
+            return p
+
+    # 2) case-insensitive scan (covers icon_vietnam.png vs icon_VIETNAM.png)
+    try:
+        target = f"icon_{raw}.png".lower()
+        for fn in os.listdir(icon_dir):
+            if fn.lower() == target:
+                return os.path.join(icon_dir, fn)
+    except Exception:
+        pass
+
+    # 3) default (non-existing) path for upstream handling
+    return os.path.join(icon_dir, f"icon_{raw}.png")
+
 
 # templates/<brand>/<box_type>_<box_group>.pdf (공백/대소문자 무시)
 def find_template_pdf(brand: str, box_type: str, box_group: str, template_root: str = TEMPLATE_ROOT) -> str:
