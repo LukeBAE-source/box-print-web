@@ -18,6 +18,13 @@ ASSETS_DIR = PROJECT_DIR / "assets"
 TEMPLATE_TABLE_IMG = ASSETS_DIR / "template_table.png"
 MANUALS_DIR = ASSETS_DIR / "manuals"
 
+# 브랜드 한글명(표시용)
+BRAND_NAME_KO = {
+    "iloom": "일룸",
+    "desker": "데스커",
+    "sloubed": "슬로우베드",
+}
+
 # 프로젝트 폴더 구조 (Streamlit Cloud에서도 상대경로 기반으로 동작)
 TEMPLATES_DIR = PROJECT_DIR / "templates"
 COORDS_JSON = PROJECT_DIR / "coords" / "coords.json"
@@ -278,59 +285,60 @@ with tab_manual:
 
         run_manual = st.button("실행(개별 입력)", type="primary")
 
-with right:
+    with right:
+        # 같은 행: 사용법 / 매뉴얼 다운로드(빨간 박스 위치)
+        usage_col, manual_col = st.columns([1.2, 1], gap="large")
 
-    # 같은 행: 사용법 / 매뉴얼 다운로드
-    usage_col, manual_col = st.columns([1.2, 1], gap="large")
+        with usage_col:
+            st.subheader("사용법")
+            st.markdown(
+                """
+                1. **brand** 선택
+                2. **item_code / 단품명(국문/영문) / 원산지** 입력
+                3. **box_type → box_group** 선택(템플릿 기준표 참조)
+                4. **실행(개별 입력)** 클릭 → PDF 다운로드
+                """
+            )
 
-    with usage_col:
-        st.subheader("사용법")
-        st.markdown(
-            """
-            1. **brand** 선택
-            2. **item_code / 단품명(국문/영문) / 원산지** 입력
-            3. **box_type → box_group** 선택(템플릿 기준표 참조)
-            4. **실행(개별 입력)** 클릭 → PDF 다운로드
+        with manual_col:
+            st.subheader("브랜드 매뉴얼")
+            st.caption("다운로드해서 포장 규격/박스 타입 확인 후 사용하세요.")
 
-            
-            """
-        )
+            if not MANUALS_DIR.exists():
+                st.warning("assets/manuals 폴더가 없습니다.")
+            else:
+                # 원하는 형태:
+                # 일룸 포장박스 매뉴얼  [다운로드]
+                # 데스커 포장박스 매뉴얼 [다운로드]
+                # 슬로우베드 포장박스 매뉴얼 [다운로드]
+                for b in brand_options:
+                    manual_path = MANUALS_DIR / f"manual_{b}.pdf"
+                    brand_ko = BRAND_NAME_KO.get(b, b)
 
-    with manual_col:
-        st.subheader("브랜드 매뉴얼")
-        st.caption("다운로드해서 포장 규격/박스 타입 확인 후 사용하세요.")
+                    row_l, row_r = st.columns([3, 1], gap="small")
+                    with row_l:
+                        st.markdown(f"**{brand_ko} 포장박스 매뉴얼**")
+                    with row_r:
+                        if manual_path.exists():
+                            with open(manual_path, "rb") as f:
+                                st.download_button(
+                                    "다운로드",
+                                    data=f,
+                                    file_name=manual_path.name,
+                                    mime="application/pdf",
+                                    key=f"manual_{b}",
+                                    use_container_width=True,
+                                )
+                        else:
+                            st.caption("없음")
 
-        if not MANUALS_DIR.exists():
-            st.warning("assets/manuals 폴더가 없습니다.")
+        st.markdown("---")
+        st.subheader("템플릿 기준표")
+
+        if TEMPLATE_TABLE_IMG.exists():
+            st.image(str(TEMPLATE_TABLE_IMG), use_container_width=True)
         else:
-            for b in brand_options:
-                manual_path = MANUALS_DIR / f"manual_{b}.pdf"
-
-                row_l, row_r = st.columns([2,1])
-
-                with row_l:
-                    st.markdown(f"`{manual_path.name}`")
-
-                with row_r:
-                    if manual_path.exists():
-                        with open(manual_path, "rb") as f:
-                            st.download_button(
-                                "다운로드",
-                                data=f,
-                                file_name=manual_path.name,
-                                mime="application/pdf",
-                                key=f"manual_{b}"
-                            )
-                    else:
-                        st.caption("없음")
-
-    st.markdown("---")
-    st.subheader("템플릿 기준표")
-
-    if TEMPLATE_TABLE_IMG.exists():
-        st.image(str(TEMPLATE_TABLE_IMG), use_container_width=True)
-    else:
-        st.warning("assets/template_table.png 파일이 없습니다.")
+            st.warning("assets/template_table.png 파일이 없습니다.")
 
     if run_manual:
         required_values = {
