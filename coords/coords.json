@@ -467,16 +467,16 @@
 ],
         "pos": {
     "L_item_code": [249, 306.5],
-    "L_name_ko": [333, 308],
+    "L_name_ko": [345, 308],
     "L_name_en": [0, 0],
     "L1_item_code": [249, 359.5],
-    "L1_name_ko": [333, 361],
+    "L1_name_ko": [345, 361],
     "L1_name_en": [0, 0],
     "L2_item_code": [249, 468.5],
-    "L2_name_ko": [333, 470],
+    "L2_name_ko": [345, 470],
     "L2_name_en": [0, 0],
     "R_item_code": [626, 426],
-    "R_name_ko": [541, 424],
+    "R_name_ko": [529, 424],
     "R_name_en": [0, 0]
         },
   "icon_pos": {
