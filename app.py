@@ -57,7 +57,6 @@ st.title("포장박스 인쇄 시안 자동화")
 # UI 스타일 (다운로드 버튼)
 st.markdown("""
 <style>
-
 /* 다운로드 버튼 스타일 */
 div.stDownloadButton > button {
     padding: 0.25rem 0.65rem !important;
@@ -78,9 +77,9 @@ div.stDownloadButton > button:hover {
     background-color: #2E3B50 !important;
     border-color: #2E3B50 !important;
 }
-
 </style>
 """, unsafe_allow_html=True)
+
 <style>
 /* 다운로드 버튼: 작게 + 줄바꿈 방지 */
 div.stDownloadButton > button{
