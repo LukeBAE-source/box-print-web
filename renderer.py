@@ -1,36 +1,101 @@
 import os
 import re
 import json
-import argparse
-import pandas as pd
+from typing import Dict, Any
 
+import pandas as pd
 from reportlab.pdfgen import canvas
-from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-
+from reportlab.lib.colors import Color
 from pypdf import PdfReader, PdfWriter
 
-# =========================
-# 기본 경로(단독 실행 시 사용)
-# =========================
-XLSX_PATH = "box_data.xlsx"
 TEMPLATE_ROOT = "templates"
-ICON_DIR = "icons"
-FONT_PATH = os.path.join("fonts", "NotoSansKR-Medium.ttf")
 COORDS_JSON_PATH = os.path.join("coords", "coords.json")
-OUT_DIR = "output_pdf"
+ICON_DIR = "icons"
 
-# =========================
-# 유틸
-# =========================
-def norm(s: str) -> str:
-    return re.sub(r"\s+", "", str(s or "")).strip().lower()
+FONT_MEDIUM_PATH = os.path.join("fonts", "NotoSansKR-Medium.ttf")
+FONT_BOLD_PATH = os.path.join("fonts", "NotoSansKR-Bold.ttf")
 
-def register_fonts(font_path: str = FONT_PATH):
-    if not os.path.exists(font_path):
-        raise FileNotFoundError(f"폰트 파일 없음: {font_path}")
-    pdfmetrics.registerFont(TTFont("NotoSansKR-Medium", font_path))
+FONT_MEDIUM_NAME = "NotoSansKR-Medium"
+FONT_BOLD_NAME = "NotoSansKR-Bold"
+
+
+# --------------------------------------------------
+# Utils
+# --------------------------------------------------
+
+def normalize(s: str) -> str:
+    return str(s or "").strip().lower()
+
+
+def register_fonts():
+    if os.path.exists(FONT_MEDIUM_PATH):
+        pdfmetrics.registerFont(TTFont(FONT_MEDIUM_NAME, FONT_MEDIUM_PATH))
+    if os.path.exists(FONT_BOLD_PATH):
+        pdfmetrics.registerFont(TTFont(FONT_BOLD_NAME, FONT_BOLD_PATH))
+
+
+def load_coords():
+    with open(COORDS_JSON_PATH, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    templates = data.get("templates", {}) or {}
+    result = {}
+
+    for brand, mp in templates.items():
+        b = normalize(brand)
+        if not isinstance(mp, dict):
+            continue
+        for key, cfg in mp.items():
+            result[(b, normalize(key))] = cfg
+
+    return result
+
+
+def get_icon_path(country: str) -> str:
+    if not country:
+        return ""
+
+    # icons 폴더가 없으면 icon 대신 텍스트로 대체 (예외 방지)
+    if not os.path.isdir(ICON_DIR):
+        return ""
+
+    key = re.sub(r"\s+", "", country).lower()
+
+    for fn in os.listdir(ICON_DIR):
+        if not fn.lower().endswith(".png"):
+            continue
+        if fn.lower().startswith("icon_"):
+            name = fn[5:-4].lower()
+            if name == key:
+                return os.path.join(ICON_DIR, fn)
+
+    return ""
+
+
+def resolve_font(cfg: Dict[str, Any], key: str, is_main: bool):
+    main_size = int(cfg.get("font_main_size", 26))
+    sub_size = int(cfg.get("font_sub_size", 12))
+
+    profiles = cfg.get("font_profiles", {}) or {}
+    key_map = cfg.get("font_key_profile", {}) or {}
+    bold_keys = set(cfg.get("font_bold_keys", []) or [])
+
+    size = main_size if is_main else sub_size
+    bold = key in bold_keys
+
+    profile_name = key_map.get(key)
+    if profile_name and profile_name in profiles:
+        profile = profiles[profile_name]
+        size = int(profile.get("size", size))
+        bold = bool(profile.get("bold", False)) or bold
+
+    if bold and FONT_BOLD_NAME in pdfmetrics.getRegisteredFontNames():
+        return FONT_BOLD_NAME, size
+
+    return FONT_MEDIUM_NAME, size
+
 
 def draw_text_rotated_180(c, x, y, text):
     c.saveState()
@@ -39,381 +104,241 @@ def draw_text_rotated_180(c, x, y, text):
     c.drawString(0, 0, text)
     c.restoreState()
 
-def draw_image_rotated_180(c, img_path, x, y, w, h):
+
+def draw_image_rotated_180(c, x, y, w, h, image_path):
+    """
+    (x,y,w,h) 영역에 이미지를 180도 회전해서 배치
+    ReportLab은 drawImage에 rotate 옵션이 없으므로 좌표계를 회전시켜 그린다.
+    """
     c.saveState()
-    c.translate(x + w, y + h)
+    c.translate(x + w, y + h)  # 박스의 우상단으로 이동 후 180도 회전
     c.rotate(180)
-    c.drawImage(ImageReader(img_path), 0, 0, width=w, height=h, mask="auto")
+    c.drawImage(image_path, 0, 0, w, h, preserveAspectRatio=True)
     c.restoreState()
 
-def load_coords(coords_json_path: str = COORDS_JSON_PATH):
-    if not os.path.exists(coords_json_path):
-        raise FileNotFoundError(f"좌표 JSON 없음: {coords_json_path}")
 
-    with open(coords_json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    defaults = data.get("defaults", {}) or {}
-    templates = data.get("templates", {}) or {}
-
-    template_coords = {}
-    for brand, mp in templates.items():
-        if not isinstance(mp, dict):
-            continue
-        for template_key, cfg in mp.items():
-            template_coords[(brand, template_key)] = cfg
-
-    return defaults, template_coords
-
-def get_icon_path(country: str, icon_dir: str = ICON_DIR) -> str:
-    """
-    icons 폴더에서 icon_<country>.png를 대/소문자 무관하게 찾는다.
-    - 예: icon_vietnam.png, icon_VIETNAM.png 모두 허용
-    - 공백은 제거하여 비교
-    반환: 찾으면 파일 경로(str), 못 찾으면 "" (빈 문자열)
-    """
-    raw = re.sub(r"\s+", "", str(country or "")).strip()
-    if not raw:
-        return ""
-
-    # 1) 흔한 변형 먼저 직접 체크 (빠름)
-    candidates = [
-        f"icon_{raw}.png",
-        f"icon_{raw.upper()}.png",
-        f"icon_{raw.lower()}.png",
-        f"icon_{raw.title()}.png",
-    ]
-    for fn in candidates:
-        p = os.path.join(icon_dir, fn)
-        if os.path.exists(p):
-            return p
-
-    # 2) icons 폴더를 스캔해서 케이스-인센서티브 매칭 (확실)
-    try:
-        want = raw.lower()
-        for fn in os.listdir(icon_dir):
-            if not fn.lower().endswith(".png"):
-                continue
-            if not fn.lower().startswith("icon_"):
-                continue
-            key = fn[5:-4]  # "icon_" 제거, ".png" 제거
-            if key.lower() == want:
-                return os.path.join(icon_dir, fn)
-    except Exception:
-        pass
-
-    return ""
-    raw_u = raw.upper()
-    raw_l = raw.lower()
-
-    # Minimal alias map (extend if needed)
-    alias_map = {
-        "KOREA": "KR",
-        "SOUTHKOREA": "KR",
-        "CHINA": "CN",
-        "PRC": "CN",
-        "VIETNAM": "VN",
-    }
-    alias_key = re.sub(r"[^A-Z0-9]", "", raw_u)
-    alias = alias_map.get(alias_key)
-
-    candidates = [
-        f"icon_{raw}.png",
-        f"icon_{raw_u}.png",
-        f"icon_{raw_l}.png",
-    ]
-    if alias:
-        candidates.extend([f"icon_{alias}.png", f"icon_{alias.lower()}.png", f"icon_{alias.upper()}.png"])
-
-    # 1) direct candidates
-    for fn in candidates:
-        p = os.path.join(icon_dir, fn)
-        if os.path.exists(p):
-            return p
-
-    # 2) case-insensitive scan (covers icon_vietnam.png vs icon_VIETNAM.png)
-    try:
-        target = f"icon_{raw}.png".lower()
-        for fn in os.listdir(icon_dir):
-            if fn.lower() == target:
-                return os.path.join(icon_dir, fn)
-    except Exception:
-        pass
-
-    # 3) default (non-existing) path for upstream handling
-    return os.path.join(icon_dir, f"icon_{raw}.png")
+def safe_filename(s: str) -> str:
+    s = str(s or "").strip()
+    s = re.sub(r'[\\/*?:"<>|]+', "_", s)  # Windows 금지문자 치환
+    s = re.sub(r"\s+", " ", s).strip()
+    return s or "output"
 
 
-# templates/<brand>/<box_type>_<box_group>.pdf (공백/대소문자 무시)
-def find_template_pdf(brand: str, box_type: str, box_group: str, template_root: str = TEMPLATE_ROOT) -> str:
-    brand_dir = os.path.join(template_root, brand)
-    if not os.path.isdir(brand_dir):
-        raise FileNotFoundError(f"템플릿 브랜드 폴더 없음: {brand_dir}")
+# --------------------------------------------------
+# Main render function
+# --------------------------------------------------
 
-    target = norm(f"{box_type}_{box_group}")
-
-    for fn in os.listdir(brand_dir):
-        if not fn.lower().endswith(".pdf"):
-            continue
-        key = norm(os.path.splitext(fn)[0])
-        if key == target:
-            return os.path.join(brand_dir, fn)
-
-    raise FileNotFoundError(f"템플릿 없음: {brand}/{box_type}_{box_group}.pdf")
-
-def get_cfg_for_template(defaults: dict, template_coords: dict, brand: str, template_pdf_path: str) -> dict:
-    stem = os.path.splitext(os.path.basename(template_pdf_path))[0]
-    template_key = norm(stem)
-
-    cfg = template_coords.get((brand, template_key))
-    if cfg:
-        return cfg
-
-    fallback = defaults.get(brand)
-    if fallback:
-        return fallback
-
-    raise KeyError(f"좌표 없음: brand={brand}, template_key={template_key} (coords.json에 등록 필요)")
-
-def is_zero_xy(xy) -> bool:
-    try:
-        return float(xy[0]) == 0 and float(xy[1]) == 0
-    except Exception:
-        return False
-
-def is_zero_rect(rect) -> bool:
-    try:
-        return float(rect[0]) == 0 and float(rect[1]) == 0 and float(rect[2]) == 0 and float(rect[3]) == 0
-    except Exception:
-        return False
-
-# =========================
-# 오버레이 생성
-# =========================
-def make_overlay_pdf(overlay_path: str, page_w: float, page_h: float, cfg: dict, row: dict, icon_dir: str = ICON_DIR):
-    c = canvas.Canvas(overlay_path, pagesize=(page_w, page_h))
-
-    cover_rects = cfg.get("cover_rects", []) or []
-    pos = cfg.get("pos", {}) or {}
-    icon_pos = cfg.get("icon_pos", {}) or {}
-
-    # 회전/숨김 설정(JSON에서 제어)
-    rotate_cfg = cfg.get("rotate_180", {}) or {}              # 텍스트용: pos 키 기준
-    icon_rotate_cfg = cfg.get("icon_rotate_180", {}) or {}    # 아이콘용: icon_pos 키 기준
-    hide_cfg = cfg.get("hide", {}) or {}                      # 텍스트 숨김: pos 키 기준
-    icon_hide_cfg = cfg.get("icon_hide", {}) or {}            # 아이콘 숨김: icon_pos 키 기준
-
-    font_main_size = int(cfg.get("font_main_size", 26))
-    font_sub_size = int(cfg.get("font_sub_size", 12))
-
-    # 1) 가리기(흰 박스)
-    c.setFillColorRGB(1, 1, 1)
-    c.setStrokeColorRGB(1, 1, 1)
-    for rect in cover_rects:
-        if is_zero_rect(rect):
-            continue
-        x, y, w, h = rect
-        c.rect(x, y, w, h, fill=1, stroke=0)
-
-    # 2) 텍스트
-    sku = str(row["item_code"])
-    name_ko = str(row["product_name_ko"])
-    name_en = str(row["product_name_en"])
-
-    c.setFillColorRGB(0, 0, 0)
-
-    # SKU(메인)
-    c.setFont("NotoSansKR-Medium", font_main_size)
-    for key, val in [("L_item_code", sku), ("L1_item_code", sku), ("L2_item_code", sku), ("L3_item_code", sku), ("R_item_code", sku)]:
-        if key not in pos:
-            continue
-        if hide_cfg.get(key, False):
-            continue
-        if is_zero_xy(pos[key]):
-            continue
-        x, y = pos[key]
-        if rotate_cfg.get(key, False):
-            draw_text_rotated_180(c, x, y, val)
-        else:
-            c.drawString(x, y, val)
-
-    # 이름(서브)
-    c.setFont("NotoSansKR-Medium", font_sub_size)
-    for key, val in [
-        ("L_name_ko", name_ko),
-        ("L_name_en", name_en),
-        ("R_name_ko", name_ko),
-        ("R_name_en", name_en),
-        ("L1_name_ko", name_ko),
-        ("L1_name_en", name_en),
-        ("L2_name_ko", name_ko),
-        ("L2_name_en", name_en),
-        ("L3_name_ko", name_ko),
-        ("L3_name_en", name_en),
-    ]:
-        if key not in pos:
-            continue
-        if hide_cfg.get(key, False):
-            continue
-        if is_zero_xy(pos[key]):
-            continue
-        x, y = pos[key]
-        if rotate_cfg.get(key, False):
-            draw_text_rotated_180(c, x, y, val)
-        else:
-            c.drawString(x, y, val)
-
-    # 3) 원산지 아이콘
-    origin = str(row.get("origin_country", "")).strip()
-    ip = get_icon_path(origin, icon_dir=icon_dir)
-
-    if ip and os.path.exists(ip):
-        for k in ("L_origin", "R_origin", "origin"):
-            if k not in icon_pos:
-                continue
-            if icon_hide_cfg.get(k, False):
-                continue
-            if is_zero_rect(icon_pos[k]):
-                continue
-            x, y, w, h = icon_pos[k]
-            if icon_rotate_cfg.get(k, False):
-                draw_image_rotated_180(c, ip, x, y, w, h)
-            else:
-                c.drawImage(ImageReader(ip), x, y, width=w, height=h, mask="auto")
-    else:
-        # 아이콘 없으면 텍스트 대체(원하면 삭제 가능)
-        msg = f"MADE IN {origin}"
-        c.setFont("NotoSansKR-Medium", 10)
-        for k in ("L_origin", "R_origin", "origin"):
-            if k not in icon_pos:
-                continue
-            if icon_hide_cfg.get(k, False):
-                continue
-            if is_zero_rect(icon_pos[k]):
-                continue
-            x, y, w, h = icon_pos[k]
-            if icon_rotate_cfg.get(k, False):
-                draw_text_rotated_180(c, x, y + h + 2, msg)
-            else:
-                c.drawString(x, y + h + 2, msg)
-
-    c.save()
-
-# =========================
-# 한 행 렌더링
-# =========================
-def render_row(
-    defaults: dict,
-    template_coords: dict,
-    row: dict,
-    *,
-    template_root: str = TEMPLATE_ROOT,
-    icon_dir: str = ICON_DIR,
-    out_dir: str = OUT_DIR,
-) -> str:
-    brand = str(row["brand"]).strip()
-    box_type = str(row["box_type"]).strip()
-    box_group = str(row["box_group"]).strip()
-
-    template_pdf = find_template_pdf(brand, box_type, box_group, template_root=template_root)
-    cfg = get_cfg_for_template(defaults, template_coords, brand, template_pdf)
-
-    reader = PdfReader(template_pdf)
-    base_page = reader.pages[0]
-    page_w = float(base_page.mediabox.width)
-    page_h = float(base_page.mediabox.height)
-
-    sku = str(row["item_code"])
-    overlay_path = os.path.join(out_dir, f"__overlay_{sku}.pdf")
-    make_overlay_pdf(overlay_path, page_w, page_h, cfg, row, icon_dir=icon_dir)
-
-    overlay_reader = PdfReader(overlay_path)
-    base_page.merge_page(overlay_reader.pages[0])
-
-    out_path = os.path.join(out_dir, f"{brand}_{box_type}_{box_group}_{sku}.pdf")
-    writer = PdfWriter()
-    writer.add_page(base_page)
-    with open(out_path, "wb") as f:
-        writer.write(f)
-
-    try:
-        os.remove(overlay_path)
-    except:
-        pass
-
-    return out_path
-
-# =========================
-# ✅ Streamlit에서 호출할 함수(추가)
-# =========================
 def run_render(
-    excel_path: str,
-    *,
-    limit: int = 0,
-    template_root: str = TEMPLATE_ROOT,
-    icon_dir: str = ICON_DIR,
-    font_path: str = FONT_PATH,
-    coords_json_path: str = COORDS_JSON_PATH,
-    out_dir: str = OUT_DIR,
-) -> list[str]:
-    """
-    Streamlit/외부에서 호출하는 진입점 함수.
+    brand: str,
+    template_key: str,
+    item_code: str,
+    name_ko: str,
+    name_en: str,
+    origin_country: str,
+    output_path: str
+):
+    register_fonts()
+    coords = load_coords()
 
-    excel_path: 업로드된 box_data.xlsx 경로
-    limit: 0이면 전체, N이면 N행만 처리
-    나머지 경로들은 기본값 유지 가능(프로젝트 구조 그대로 사용)
-    return: 생성된 PDF 파일 경로 리스트
-    """
+    b = normalize(brand)
+    t = normalize(template_key)
+
+    if (b, t) not in coords:
+        raise ValueError(f"coords 없음: {b}/{t}")
+
+    cfg = coords[(b, t)]
+
+    template_path = os.path.join(TEMPLATE_ROOT, b, f"{t}.pdf")
+    if not os.path.exists(template_path):
+        raise FileNotFoundError(f"템플릿 없음: {os.path.abspath(template_path)}")
+
+    # output 폴더 보장
+    out_dir = os.path.dirname(output_path) or "."
     os.makedirs(out_dir, exist_ok=True)
 
-    register_fonts(font_path)
-    defaults, template_coords = load_coords(coords_json_path)
+    abs_out = os.path.abspath(output_path)
+    print("CWD:", os.getcwd())
+    print("OUTPUT:", abs_out)
 
-    df = pd.read_excel(excel_path)
+    overlay_path = output_path + ".overlay.pdf"
 
-    required = ["brand","box_type","box_group","item_code","product_name_ko","product_name_en","origin_country"]
-    missing = [c for c in required if c not in df.columns]
+    try:
+        reader = PdfReader(template_path)
+        page = reader.pages[0]
+
+        w = float(page.mediabox.width)
+        h = float(page.mediabox.height)
+
+        c = canvas.Canvas(overlay_path, pagesize=(w, h))
+
+        # --------------------------------------------------
+        # COVER (가리기) - 텍스트/아이콘보다 먼저 그려야 함
+        # --------------------------------------------------
+        cover_rects = cfg.get("cover_rects", []) or []
+        if cover_rects:
+            c.saveState()
+            c.setFillColor(Color(1, 1, 1))    # 흰색
+            c.setStrokeColor(Color(1, 1, 1))  # 테두리도 흰색(표시 안 되게)
+            for r in cover_rects:
+                if not isinstance(r, (list, tuple)) or len(r) < 4:
+                    continue
+                x, y, rw, rh = map(float, r[:4])
+                if rw <= 0 or rh <= 0:
+                    continue
+                c.rect(x, y, rw, rh, stroke=0, fill=1)
+            c.restoreState()
+
+        pos = cfg.get("pos", {}) or {}
+        icon_pos = cfg.get("icon_pos", {}) or {}
+        rotate_cfg = cfg.get("rotate_180", {}) or {}
+        icon_rotate_cfg = cfg.get("icon_rotate_180", {}) or {}
+
+        # --------------------------------------------------
+        # TEXT
+        # --------------------------------------------------
+        for key, xy in pos.items():
+            if not isinstance(xy, (list, tuple)) or len(xy) < 2:
+                continue
+
+            x, y = float(xy[0]), float(xy[1])
+            if x == 0 and y == 0:
+                continue
+
+            if "item_code" in key:
+                text = item_code
+                is_main = True
+            elif key.endswith("_name_ko"):
+                text = name_ko
+                is_main = False
+            elif key.endswith("_name_en"):
+                text = name_en
+                is_main = False
+            else:
+                continue
+
+            font_name, size = resolve_font(cfg, key, is_main)
+            c.setFont(font_name, size)
+
+            if rotate_cfg.get(key, False):
+                draw_text_rotated_180(c, x, y, text)
+            else:
+                c.drawString(x, y, text)
+
+        # --------------------------------------------------
+        # ICON
+        # --------------------------------------------------
+        icon_path = get_icon_path(origin_country)
+
+        for key, r in icon_pos.items():
+            if not isinstance(r, (list, tuple)) or len(r) < 4:
+                continue
+
+            x, y, rw, rh = map(float, r)
+            do_rot = bool(icon_rotate_cfg.get(key, False))
+
+            if icon_path and os.path.exists(icon_path):
+                if do_rot:
+                    draw_image_rotated_180(c, x, y, rw, rh, icon_path)
+                else:
+                    c.drawImage(icon_path, x, y, rw, rh, preserveAspectRatio=True)
+            else:
+                c.setFont(FONT_MEDIUM_NAME, 8)
+                if do_rot:
+                    draw_text_rotated_180(c, x, y, origin_country or "")
+                else:
+                    c.drawString(x, y, origin_country or "")
+
+        c.showPage()
+        c.save()
+
+        overlay_reader = PdfReader(overlay_path)
+        overlay_page = overlay_reader.pages[0]
+
+        writer = PdfWriter()
+        page.merge_page(overlay_page)
+        writer.add_page(page)
+
+        with open(output_path, "wb") as f:
+            writer.write(f)
+
+        if not os.path.exists(output_path):
+            raise RuntimeError(f"output 파일이 생성되지 않음: {abs_out}")
+        if os.path.getsize(output_path) == 0:
+            raise RuntimeError(f"output 파일 0바이트: {abs_out}")
+
+        print("SAVED:", abs_out, "size:", os.path.getsize(output_path))
+
+    finally:
+        if os.path.exists(overlay_path):
+            try:
+                os.remove(overlay_path)
+            except Exception as e:
+                print("overlay 삭제 실패:", overlay_path, e)
+
+
+# --------------------------------------------------
+# Excel Batch Mode
+# --------------------------------------------------
+
+def run_batch_from_excel(excel_path="box_data.xlsx", output_dir="output_pdf"):
+    if not os.path.exists(excel_path):
+        raise FileNotFoundError(f"엑셀 파일 없음: {os.path.abspath(excel_path)}")
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    df = pd.read_excel(excel_path, dtype=str).fillna("")
+
+    required_cols = [
+        "brand", "box_type", "box_group", "item_code",
+        "product_name_ko", "product_name_en", "origin_country"
+    ]
+    missing = [c for c in required_cols if c not in df.columns]
     if missing:
-        raise KeyError(f"엑셀에 필수 컬럼이 없음: {missing}")
+        raise ValueError(f"엑셀 필수 컬럼 누락: {missing} / 현재 컬럼: {list(df.columns)}")
 
-    out_files = []
-    count = 0
-    for _, r in df.iterrows():
-        out_files.append(
-            render_row(
-                defaults,
-                template_coords,
-                r.to_dict(),
-                template_root=template_root,
-                icon_dir=icon_dir,
-                out_dir=out_dir,
+    success = 0
+    fail = 0
+
+    for idx, row in df.iterrows():
+        brand = row.get("brand", "").strip()
+        box_type = row.get("box_type", "").strip()
+        box_group = row.get("box_group", "").strip()
+        item_code = row.get("item_code", "").strip()
+        name_ko = row.get("product_name_ko", "").strip()
+        name_en = row.get("product_name_en", "").strip()
+        origin_country = row.get("origin_country", "").strip()
+
+        if not brand or not box_type or not box_group or not item_code:
+            continue
+
+        template_key = f"{box_type}_{box_group}".lower()
+
+        filename = safe_filename(f"{brand}_{template_key}_{item_code}.pdf")
+        output_path = os.path.join(output_dir, filename)
+
+        try:
+            run_render(
+                brand=brand,
+                template_key=template_key,
+                item_code=item_code,
+                name_ko=name_ko,
+                name_en=name_en,
+                origin_country=origin_country,
+                output_path=output_path,
             )
-        )
-        count += 1
-        if limit and count >= limit:
-            break
+            success += 1
+            print(f"[OK] row {idx+2} → {output_path}")
+        except Exception as e:
+            fail += 1
+            print(f"[FAIL] row {idx+2} → {e}")
 
-    return out_files
+    print(f"\n완료: 성공 {success}건 / 실패 {fail}건")
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--limit", type=int, default=0, help="처리 행 수 제한(0이면 전체)")
-    args = parser.parse_args()
 
-    # 기존 단독 실행은 그대로 유지
-    out_files = run_render(
-        XLSX_PATH,
-        limit=args.limit,
-        template_root=TEMPLATE_ROOT,
-        icon_dir=ICON_DIR,
-        font_path=FONT_PATH,
-        coords_json_path=COORDS_JSON_PATH,
-        out_dir=OUT_DIR,
-    )
-
-    print("RENDER DONE:")
-    for p in out_files[:20]:
-        print(" -", p)
+# --------------------------------------------------
+# Main Entry
+# --------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    # renderer.py 실행 시: box_data.xlsx 기반으로 output_pdf/에 일괄 생성
+    run_batch_from_excel()

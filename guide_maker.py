@@ -1,191 +1,257 @@
 import os
-import re
 import json
-import csv
 import argparse
+from typing import Dict, Tuple, Any
 
 from reportlab.pdfgen import canvas
+from reportlab.lib.colors import Color, red, blue, black
 from pypdf import PdfReader, PdfWriter
 
 TEMPLATE_ROOT = "templates"
 COORDS_JSON_PATH = os.path.join("coords", "coords.json")
-
 GUIDE_ROOT = "guide_pdf"
-os.makedirs(GUIDE_ROOT, exist_ok=True)
+
+GRID_SPACING = 10
+GRID_MAJOR_EVERY = 5
+GRID_LABEL_FONT = 7
 
 
-def norm(s: str) -> str:
-    return re.sub(r"\s+", "", str(s or "")).strip().lower()
+def ensure_dir(path: str):
+    os.makedirs(path, exist_ok=True)
 
 
-def load_coords():
-    if not os.path.exists(COORDS_JSON_PATH):
-        raise FileNotFoundError(f"좌표 JSON 없음: {COORDS_JSON_PATH}")
+def normalize(s: str) -> str:
+    return str(s or "").strip().lower()
 
-    with open(COORDS_JSON_PATH, "r", encoding="utf-8") as f:
-        data = json.load(f)
 
-    defaults = data.get("defaults", {}) or {}
+def load_coords() -> Dict[Tuple[str, str], Dict[str, Any]]:
+    path = COORDS_JSON_PATH
+    raw = open(path, "r", encoding="utf-8").read()
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as e:
+        # context 출력
+        lines = raw.splitlines()
+        start = max(1, e.lineno - 5)
+        end = min(len(lines), e.lineno + 5)
+
+        print("\n[coords.json JSONDecodeError]")
+        print(f"- message : {e.msg}")
+        print(f"- line    : {e.lineno}")
+        print(f"- column  : {e.colno}")
+        print("\n[Context]")
+        for ln in range(start, end + 1):
+            prefix = ">>" if ln == e.lineno else "  "
+            print(f"{prefix} {ln:4d}: {lines[ln-1]}")
+            if ln == e.lineno:
+                print(" " * (e.colno + 7) + "^")
+        raise
+
     templates = data.get("templates", {}) or {}
-
-    template_coords = {}
+    result = {}
     for brand, mp in templates.items():
+        b = normalize(brand)
         if not isinstance(mp, dict):
             continue
-        for template_key, cfg in mp.items():
-            template_coords[(brand, template_key)] = cfg
+        for key, cfg in mp.items():
+            result[(b, normalize(key))] = cfg
+    return result
 
-    return defaults, template_coords
+def find_templates() -> Dict[Tuple[str, str], str]:
+    result = {}
 
-
-def make_guide_overlay_pdf(overlay_path: str, page_w: float, page_h: float, cfg: dict | None, note: str | None = None):
-    c = canvas.Canvas(overlay_path, pagesize=(page_w, page_h))
-
-    # grid
-    step = 10
-    c.setStrokeColorRGB(0.85, 0.85, 0.85)
-    c.setLineWidth(0.5)
-    for x in range(0, int(page_w) + 1, step):
-        c.line(x, 0, x, page_h)
-    for y in range(0, int(page_h) + 1, step):
-        c.line(0, y, page_w, y)
-
-    # labels
-    c.setFillColorRGB(0, 0, 1)
-    c.setFont("Helvetica", 8)
-    for x in range(0, int(page_w) + 1, step * 2):
-        c.drawString(x + 2, 2, f"x={x}")
-    for y in range(0, int(page_h) + 1, step * 2):
-        c.drawString(2, y + 2, f"y={y}")
-
-    # note
-    if note:
-        c.setFillColorRGB(1, 0, 0)
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(20, page_h - 30, note)
-
-    if not cfg:
-        c.save()
-        return
-
-    cover_rects = cfg.get("cover_rects", []) or []
-    pos = cfg.get("pos", {}) or {}
-    icon_pos = cfg.get("icon_pos", {}) or {}
-
-    # cover_rects (red)
-    c.setStrokeColorRGB(1, 0, 0)
-    c.setLineWidth(1)
-    for i, rect in enumerate(cover_rects, start=1):
-        x, y, w, h = rect
-        c.rect(x, y, w, h, fill=0, stroke=1)
-        c.setFillColorRGB(1, 0, 0)
-        c.setFont("Helvetica", 8)
-        c.drawString(x, y + h + 2, f"cover#{i}")
-
-    # pos (green)
-    c.setFillColorRGB(0, 0.6, 0)
-    c.setStrokeColorRGB(0, 0.6, 0)
-    c.setFont("Helvetica", 8)
-    for k, xy in pos.items():
-        x, y = xy
-        c.circle(x, y, 3, stroke=1, fill=1)
-        c.drawString(x + 5, y + 3, k)
-
-    # icon_pos (blue)
-    c.setStrokeColorRGB(0, 0, 1)
-    c.setFillColorRGB(0, 0, 1)
-    c.setFont("Helvetica", 8)
-    for k, rect in icon_pos.items():
-        x, y, w, h = rect
-        c.rect(x, y, w, h, fill=0, stroke=1)
-        c.drawString(x, y + h + 2, k)
-
-    c.save()
-
-
-def scan_templates():
-    items = []
     if not os.path.isdir(TEMPLATE_ROOT):
-        raise FileNotFoundError("templates 폴더가 없습니다.")
+        return result
 
     for brand in os.listdir(TEMPLATE_ROOT):
         brand_dir = os.path.join(TEMPLATE_ROOT, brand)
         if not os.path.isdir(brand_dir):
             continue
 
+        b = normalize(brand)
+
         for fn in os.listdir(brand_dir):
             if not fn.lower().endswith(".pdf"):
                 continue
-            path = os.path.join(brand_dir, fn)
-            stem = os.path.splitext(fn)[0]
-            template_key = norm(stem)
-            items.append((brand, fn, path, template_key))
 
-    return items
+            stem = os.path.splitext(fn)[0]
+            result[(b, normalize(stem))] = os.path.join(brand_dir, fn)
+
+    return result
+
+
+def draw_grid_with_axes(c: canvas.Canvas, w: float, h: float):
+    minor_color = Color(0.85, 0.85, 0.85)
+    major_color = Color(0.65, 0.65, 0.65)
+
+    # Minor grid
+    c.setStrokeColor(minor_color)
+    c.setLineWidth(0.25)
+
+    x = 0
+    while x <= w:
+        c.line(x, 0, x, h)
+        x += GRID_SPACING
+
+    y = 0
+    while y <= h:
+        c.line(0, y, w, y)
+        y += GRID_SPACING
+
+    # Major grid + axis numbers
+    c.setStrokeColor(major_color)
+    c.setLineWidth(0.5)
+    c.setFont("Helvetica", GRID_LABEL_FONT)
+
+    step_major = GRID_SPACING * GRID_MAJOR_EVERY
+
+    x = 0
+    while x <= w:
+        c.line(x, 0, x, h)
+        c.drawString(x + 2, 2, f"{int(x)}")
+        x += step_major
+
+    y = 0
+    while y <= h:
+        c.line(0, y, w, y)
+        c.drawString(2, y + 2, f"{int(y)}")
+        y += step_major
+
+    c.setFillColor(black)
+    c.drawString(3, 3, "0,0")
+
+
+def make_guide(template_path: str, out_path: str, cfg: Dict[str, Any]):
+    reader = PdfReader(template_path)
+    page = reader.pages[0]
+
+    w = float(page.mediabox.width)
+    h = float(page.mediabox.height)
+
+    overlay_path = out_path + ".overlay.pdf"
+    c = canvas.Canvas(overlay_path, pagesize=(w, h))
+
+    # 1️⃣ Grid
+    draw_grid_with_axes(c, w, h)
+
+    # 2️⃣ cover_rects (빨간색 + 번호)
+    c.setStrokeColor(red)
+    c.setFillColor(red)
+    c.setLineWidth(0.7)
+    c.setFont("Helvetica", 8)
+
+    cover_rects = cfg.get("cover_rects", []) or []
+
+    for idx, r in enumerate(cover_rects, start=1):
+
+        if not isinstance(r, (list, tuple)) or len(r) < 4:
+            continue
+
+        x, y, rw, rh = map(float, r)
+
+        # 박스
+        c.rect(x, y, rw, rh, stroke=1, fill=0)
+
+        # 번호(박스 밖 상단 우선)
+        label = str(idx)
+        pad = 3
+        label_h = 9
+
+        lx = x
+        ly = y + rh + pad
+
+        if ly + label_h > h:
+            ly = y - label_h - pad
+
+        if ly < 0:
+            lx = x + rw + pad
+            ly = y + rh - label_h
+
+        c.drawString(lx, ly, label)
+
+    # 3️⃣ pos (파란색)
+    c.setStrokeColor(blue)
+    c.setFillColor(blue)
+    c.setLineWidth(0.5)
+    c.setFont("Helvetica", 7)
+
+    pos = cfg.get("pos", {}) or {}
+
+    for key, xy in pos.items():
+        if not isinstance(xy, (list, tuple)) or len(xy) < 2:
+            continue
+
+        x, y = float(xy[0]), float(xy[1])
+
+        if x == 0 and y == 0:
+            continue
+
+        c.circle(x, y, 1.3, stroke=1, fill=1)
+        c.drawString(x + 3, y + 2, str(key))
+
+    c.showPage()
+    c.save()
+
+    # merge overlay
+    overlay_reader = PdfReader(overlay_path)
+    overlay_page = overlay_reader.pages[0]
+
+    writer = PdfWriter()
+    page.merge_page(overlay_page)
+    writer.add_page(page)
+
+    with open(out_path, "wb") as f:
+        writer.write(f)
+
+    os.remove(overlay_path)
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--all", action="store_true", help="templates의 모든 pdf 템플릿 가이드 생성")
+    parser.add_argument("--all", action="store_true")
+    parser.add_argument("--brand", type=str, default="")
+    parser.add_argument("--template", type=str, default="")
     args = parser.parse_args()
 
-    if not args.all:
-        print("사용법: python guide_maker.py --all")
-        return
+    ensure_dir(GUIDE_ROOT)
 
-    defaults, template_coords = load_coords()
-    templates = scan_templates()
+    coords = load_coords()
+    templates = find_templates()
 
-    missing_rows = []
-    total = 0
+    targets = []
 
-    for brand, fn, path, template_key in templates:
-        brand_out_dir = os.path.join(GUIDE_ROOT, brand)
-        os.makedirs(brand_out_dir, exist_ok=True)
+    if args.all:
+        for (b, t), path in templates.items():
+            targets.append((b, t, path))
+    else:
+        b = normalize(args.brand)
+        t = normalize(args.template)
 
-        # cfg 선택: template-specific > brand default > None
-        cfg = template_coords.get((brand, template_key))
-        note = None
-        if cfg is None:
-            cfg = defaults.get(brand)
-            note = "NO TEMPLATE COORDS (using brand defaults)" if cfg else "NO COORDS (grid only)"
-            missing_rows.append([brand, template_key, fn])
+        if not b or not t:
+            print("사용법: --all 또는 --brand <b> --template <t>")
+            return
 
-        reader = PdfReader(path)
-        base_page = reader.pages[0]
-        page_w = float(base_page.mediabox.width)
-        page_h = float(base_page.mediabox.height)
+        if (b, t) not in templates:
+            print("템플릿 없음")
+            return
 
-        overlay_tmp = os.path.join(brand_out_dir, "__tmp_overlay.pdf")
-        make_guide_overlay_pdf(overlay_tmp, page_w, page_h, cfg, note)
+        targets.append((b, t, templates[(b, t)]))
 
-        overlay_reader = PdfReader(overlay_tmp)
-        base_page.merge_page(overlay_reader.pages[0])
+    for b, t, path in targets:
+        cfg = coords.get((b, t))
 
-        out_path = os.path.join(brand_out_dir, f"GUIDE_{fn}")
-        writer = PdfWriter()
-        writer.add_page(base_page)
-        with open(out_path, "wb") as f:
-            writer.write(f)
+        if not cfg:
+            print(f"[SKIP] coords 없음: {b}/{t}")
+            continue
 
-        try:
-            os.remove(overlay_tmp)
-        except:
-            pass
+        brand_dir = os.path.join(GUIDE_ROOT, b)
+        ensure_dir(brand_dir)
 
-        total += 1
+        out_path = os.path.join(brand_dir, f"GUIDE_{b}_{t}.pdf")
+        make_guide(path, out_path, cfg)
 
-    # missing CSV
-    if missing_rows:
-        csv_path = os.path.join(GUIDE_ROOT, "missing_templates.csv")
-        with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
-            w = csv.writer(f)
-            w.writerow(["brand", "template_key", "template_filename"])
-            w.writerows(missing_rows)
-        print(f"missing_templates.csv 생성: {csv_path}")
-
-    print(f"GUIDE 생성 완료: {total} files")
-    print(f"가이드 폴더: {GUIDE_ROOT}/<brand>/GUIDE_*.pdf")
+        print(f"[OK] {out_path}")
 
 
 if __name__ == "__main__":
