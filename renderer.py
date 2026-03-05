@@ -1,374 +1,371 @@
-import os
-import re
-import json
-import glob
-from typing import Dict, Any, Tuple
+# app.py
+import io
+import time
+import zipfile
+import traceback
+from pathlib import Path
 
 import pandas as pd
-from reportlab.pdfgen import canvas
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.lib.colors import Color
-from pypdf import PdfReader, PdfWriter
+import streamlit as st
 
-TEMPLATE_ROOT = "templates"
-COORDS_JSON_PATH = os.path.join("coords", "coords.json")
-ICON_DIR = "icons"
+from renderer import run_render, safe_filename
 
-FONT_MEDIUM_PATH = os.path.join("fonts", "NotoSansKR-Medium.ttf")
-FONT_BOLD_PATH = os.path.join("fonts", "NotoSansKR-Bold.ttf")
+# -----------------------------
+# Paths
+# -----------------------------
+PROJECT_DIR = Path(__file__).resolve().parent
+TMP_DIR = PROJECT_DIR / "_tmp_uploads"
+TMP_DIR.mkdir(exist_ok=True)
 
-FONT_MEDIUM_NAME = "NotoSansKR-Medium"
-FONT_BOLD_NAME = "NotoSansKR-Bold"
+ASSETS_DIR = PROJECT_DIR / "assets"
+TEMPLATE_TABLE_IMG = ASSETS_DIR / "template_table.png"
+MANUALS_DIR = ASSETS_DIR / "manuals"
+
+FORMS_DIR = ASSETS_DIR / "forms"
+BOX_DATA_TEMPLATE = FORMS_DIR / "box_data.xlsx"  # 양식 다운로드 파일
+
+TEMPLATES_DIR = PROJECT_DIR / "templates"
+COORDS_JSON = PROJECT_DIR / "coords" / "coords.json"
+ICONS_DIR = PROJECT_DIR / "icons"
+OUT_DIR = PROJECT_DIR / "output_pdf"
+OUT_DIR.mkdir(exist_ok=True)
+
+# --------------------------
+# Config
+# --------------------------
+BRAND_NAME_KO = {
+    "iloom": "일룸",
+    "desker": "데스커",
+    "sloubed": "슬로우",
+}
+
+REQUIRED_COLS = [
+    "brand",
+    "item_code",
+    "origin_country",
+    "product_name_ko",
+    "product_name_en",
+    "box_type",
+    "box_group",
+]
+
+ORIGIN_OPTIONS = [
+    "KOREA",
+    "CHINA",
+    "VIETNAM",
+]
+
+# --------------------------
+# Helpers
+# --------------------------
+def _ensure_prerequisites():
+    missing = []
+    if not TEMPLATES_DIR.exists():
+        missing.append(f"templates 폴더 없음: {TEMPLATES_DIR}")
+    if not COORDS_JSON.exists():
+        missing.append(f"coords.json 없음: {COORDS_JSON}")
+    if not ICONS_DIR.exists():
+        missing.append(f"icons 폴더 없음: {ICONS_DIR}")
+    if missing:
+        st.error("필수 리소스가 없습니다:\n\n- " + "\n- ".join(missing))
+        st.stop()
 
 
-# --------------------------------------------------
-# Utils
-# --------------------------------------------------
+def _scan_template_options(brand: str):
+    brand = (brand or "").strip().lower()
+    brand_dir = TEMPLATES_DIR / brand
+    if not brand_dir.exists():
+        return [], {}
 
-def normalize(s: str) -> str:
-    return str(s or "").strip().lower()
-
-
-def register_fonts():
-    if os.path.exists(FONT_MEDIUM_PATH):
-        pdfmetrics.registerFont(TTFont(FONT_MEDIUM_NAME, FONT_MEDIUM_PATH))
-    if os.path.exists(FONT_BOLD_PATH):
-        pdfmetrics.registerFont(TTFont(FONT_BOLD_NAME, FONT_BOLD_PATH))
-
-
-def load_coords():
-    with open(COORDS_JSON_PATH, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    templates = data.get("templates", {}) or {}
-    result = {}
-
-    for brand, mp in templates.items():
-        b = normalize(brand)
-        if not isinstance(mp, dict):
+    pdfs = list(brand_dir.glob("*.pdf"))
+    options = []
+    mapping = {}
+    for p in pdfs:
+        key = p.stem.strip()
+        if not key:
             continue
-        for key, cfg in mp.items():
-            result[(b, normalize(key))] = cfg
+        options.append(key)
+        mapping[key.lower()] = key
 
-    return result
-
-
-def get_icon_path(country: str) -> str:
-    if not country:
-        return ""
-
-    # icons 폴더가 없으면 icon 대신 텍스트로 대체 (예외 방지)
-    if not os.path.isdir(ICON_DIR):
-        return ""
-
-    key = re.sub(r"\s+", "", country).lower()
-
-    for fn in os.listdir(ICON_DIR):
-        if not fn.lower().endswith(".png"):
-            continue
-        if fn.lower().startswith("icon_"):
-            name = fn[5:-4].lower()
-            if name == key:
-                return os.path.join(ICON_DIR, fn)
-
-    return ""
+    options_sorted = sorted(set(options), key=lambda x: x.lower())
+    return options_sorted, mapping
 
 
-def resolve_font(cfg: Dict[str, Any], key: str, is_main: bool):
-    main_size = int(cfg.get("font_main_size", 26))
-    sub_size = int(cfg.get("font_sub_size", 12))
-
-    profiles = cfg.get("font_profiles", {}) or {}
-    key_map = cfg.get("font_key_profile", {}) or {}
-    bold_keys = set(cfg.get("font_bold_keys", []) or [])
-
-    size = main_size if is_main else sub_size
-    bold = key in bold_keys
-
-    profile_name = key_map.get(key)
-    if profile_name and profile_name in profiles:
-        profile = profiles[profile_name]
-        size = int(profile.get("size", size))
-        bold = bool(profile.get("bold", False)) or bold
-
-    if bold and FONT_BOLD_NAME in pdfmetrics.getRegisteredFontNames():
-        return FONT_BOLD_NAME, size
-
-    return FONT_MEDIUM_NAME, size
+def _split_template_key(template_key: str):
+    # template_key like BASIC_M, PANEL_MS
+    s = (template_key or "").strip()
+    if "_" not in s:
+        return s, ""
+    a, b = s.split("_", 1)
+    return a, b
 
 
-def draw_text_rotated_180(c, x, y, text):
-    c.saveState()
-    c.translate(x, y)
-    c.rotate(180)
-    c.drawString(0, 0, text)
-    c.restoreState()
+def _render_single_pdf(row: dict) -> Path:
+    brand = str(row["brand"]).strip()
+    box_type = str(row["box_type"]).strip()
+    box_group = str(row["box_group"]).strip()
+    item_code = str(row["item_code"]).strip()
+    name_ko = str(row["product_name_ko"]).strip()
+    name_en = str(row["product_name_en"]).strip()
+    origin_country = str(row["origin_country"]).strip()
 
+    template_key = f"{box_type}_{box_group}".lower()
+    filename = safe_filename(f"{brand}_{template_key}_{item_code}.pdf")
+    output_path = OUT_DIR / filename
 
-def draw_image_rotated_180(c, x, y, w, h, image_path):
-    """
-    (x,y,w,h) 영역에 이미지를 180도 회전해서 배치
-    ReportLab은 drawImage에 rotate 옵션이 없으므로 좌표계를 회전시켜 그린다.
-    """
-    c.saveState()
-    c.translate(x + w, y + h)  # 박스의 우상단으로 이동 후 180도 회전
-    c.rotate(180)
-    c.drawImage(image_path, 0, 0, w, h, preserveAspectRatio=True)
-    c.restoreState()
-
-
-def safe_filename(s: str) -> str:
-    s = str(s or "").strip()
-    s = re.sub(r'[\\/*?:"<>|]+', "_", s)  # Windows 금지문자 치환
-    s = re.sub(r"\s+", " ", s).strip()
-    return s or "output"
-
-
-def find_template_path(template_root: str, brand_norm: str, template_key_norm: str) -> str:
-    """
-    templates/<brand>/*.pdf 중에서 파일명(확장자 제외)을
-    template_key와 '대소문자 무시'하여 매칭해 실제 경로를 반환한다.
-
-    - Streamlit Cloud(Linux)에서 BASIC_S.pdf vs basic_s.pdf 문제를 해결
-    - 혼용(예: Basic_S.pdf)도 정상 매칭
-    """
-    brand_dir = os.path.join(template_root, brand_norm)
-
-    if not os.path.isdir(brand_dir):
-        raise FileNotFoundError(f"템플릿 브랜드 폴더 없음: {os.path.abspath(brand_dir)}")
-
-    candidates = glob.glob(os.path.join(brand_dir, "*.pdf"))
-    if not candidates:
-        raise FileNotFoundError(f"템플릿 PDF 없음: {os.path.abspath(brand_dir)}")
-
-    target = normalize(template_key_norm)
-
-    for p in candidates:
-        stem = normalize(os.path.splitext(os.path.basename(p))[0])
-        if stem == target:
-            return p
-
-    # 디버깅용: 후보 일부 제공
-    sample = [os.path.basename(x) for x in sorted(candidates)[:30]]
-    raise FileNotFoundError(
-        f"템플릿 없음: {os.path.abspath(os.path.join(brand_dir, template_key_norm + '.pdf'))} "
-        f"(폴더 내 PDF 예시: {sample})"
+    run_render(
+        brand=brand,
+        template_key=template_key,
+        item_code=item_code,
+        name_ko=name_ko,
+        name_en=name_en,
+        origin_country=origin_country,
+        output_path=str(output_path),
     )
+    return output_path
 
 
-# --------------------------------------------------
-# Main render function
-# --------------------------------------------------
-
-def run_render(
-    brand: str,
-    template_key: str,
-    item_code: str,
-    name_ko: str,
-    name_en: str,
-    origin_country: str,
-    output_path: str
-):
-    register_fonts()
-    coords = load_coords()
-
-    b = normalize(brand)
-    t = normalize(template_key)
-
-    if (b, t) not in coords:
-        raise ValueError(f"coords 없음: {b}/{t}")
-
-    cfg = coords[(b, t)]
-
-    # [중요] 템플릿 파일명 대소문자 무시 매칭
-    template_path = find_template_path(TEMPLATE_ROOT, b, t)
-
-    # output 폴더 보장
-    out_dir = os.path.dirname(output_path) or "."
-    os.makedirs(out_dir, exist_ok=True)
-
-    abs_out = os.path.abspath(output_path)
-    overlay_path = output_path + ".overlay.pdf"
-
-    try:
-        reader = PdfReader(template_path)
-        page = reader.pages[0]
-
-        w = float(page.mediabox.width)
-        h = float(page.mediabox.height)
-
-        c = canvas.Canvas(overlay_path, pagesize=(w, h))
-
-        # --------------------------------------------------
-        # COVER (가리기) - 텍스트/아이콘보다 먼저 그려야 함
-        # --------------------------------------------------
-        cover_rects = cfg.get("cover_rects", []) or []
-        if cover_rects:
-            c.saveState()
-            c.setFillColor(Color(1, 1, 1))    # 흰색
-            c.setStrokeColor(Color(1, 1, 1))  # 테두리도 흰색(표시 안 되게)
-            for r in cover_rects:
-                if not isinstance(r, (list, tuple)) or len(r) < 4:
-                    continue
-                x, y, rw, rh = map(float, r[:4])
-                if rw <= 0 or rh <= 0:
-                    continue
-                c.rect(x, y, rw, rh, stroke=0, fill=1)
-            c.restoreState()
-
-        pos = cfg.get("pos", {}) or {}
-        icon_pos = cfg.get("icon_pos", {}) or {}
-        rotate_cfg = cfg.get("rotate_180", {}) or {}
-        icon_rotate_cfg = cfg.get("icon_rotate_180", {}) or {}
-
-        # --------------------------------------------------
-        # TEXT
-        # --------------------------------------------------
-        for key, xy in pos.items():
-            if not isinstance(xy, (list, tuple)) or len(xy) < 2:
-                continue
-
-            x, y = float(xy[0]), float(xy[1])
-            if x == 0 and y == 0:
-                continue
-
-            if "item_code" in key:
-                text = item_code
-                is_main = True
-            elif key.endswith("_name_ko"):
-                text = name_ko
-                is_main = False
-            elif key.endswith("_name_en"):
-                text = name_en
-                is_main = False
-            else:
-                continue
-
-            font_name, size = resolve_font(cfg, key, is_main)
-            c.setFont(font_name, size)
-
-            if rotate_cfg.get(key, False):
-                draw_text_rotated_180(c, x, y, text)
-            else:
-                c.drawString(x, y, text)
-
-        # --------------------------------------------------
-        # ICON
-        # --------------------------------------------------
-        icon_path = get_icon_path(origin_country)
-
-        for key, r in icon_pos.items():
-            if not isinstance(r, (list, tuple)) or len(r) < 4:
-                continue
-
-            x, y, rw, rh = map(float, r)
-            do_rot = bool(icon_rotate_cfg.get(key, False))
-
-            if icon_path and os.path.exists(icon_path):
-                if do_rot:
-                    draw_image_rotated_180(c, x, y, rw, rh, icon_path)
-                else:
-                    c.drawImage(icon_path, x, y, rw, rh, preserveAspectRatio=True)
-            else:
-                # 아이콘이 없으면 텍스트로 대체
-                c.setFont(FONT_MEDIUM_NAME, 8)
-                if do_rot:
-                    draw_text_rotated_180(c, x, y, origin_country or "")
-                else:
-                    c.drawString(x, y, origin_country or "")
-
-        c.showPage()
-        c.save()
-
-        overlay_reader = PdfReader(overlay_path)
-        overlay_page = overlay_reader.pages[0]
-
-        writer = PdfWriter()
-        page.merge_page(overlay_page)
-        writer.add_page(page)
-
-        with open(output_path, "wb") as f:
-            writer.write(f)
-
-        if not os.path.exists(output_path):
-            raise RuntimeError(f"output 파일이 생성되지 않음: {abs_out}")
-        if os.path.getsize(output_path) == 0:
-            raise RuntimeError(f"output 파일 0바이트: {abs_out}")
-
-    finally:
-        if os.path.exists(overlay_path):
-            try:
-                os.remove(overlay_path)
-            except Exception as e:
-                print("overlay 삭제 실패:", overlay_path, e)
-
-
-# --------------------------------------------------
-# Excel Batch Mode
-# --------------------------------------------------
-
-def run_batch_from_excel(excel_path="box_data.xlsx", output_dir="output_pdf"):
-    if not os.path.exists(excel_path):
-        raise FileNotFoundError(f"엑셀 파일 없음: {os.path.abspath(excel_path)}")
-
-    os.makedirs(output_dir, exist_ok=True)
-
+def _render_excel_to_zip(excel_path: Path, ts: str):
     df = pd.read_excel(excel_path, dtype=str).fillna("")
 
-    required_cols = [
-        "brand", "box_type", "box_group", "item_code",
-        "product_name_ko", "product_name_en", "origin_country"
-    ]
-    missing = [c for c in required_cols if c not in df.columns]
-    if missing:
-        raise ValueError(f"엑셀 필수 컬럼 누락: {missing} / 현재 컬럼: {list(df.columns)}")
+    missing_cols = [c for c in REQUIRED_COLS if c not in df.columns]
+    if missing_cols:
+        raise ValueError(f"엑셀에 필수 컬럼이 없습니다: {missing_cols}")
 
-    success = 0
-    fail = 0
+    out_mem = io.BytesIO()
+    failures = []
 
-    for idx, row in df.iterrows():
-        brand = row.get("brand", "").strip()
-        box_type = row.get("box_type", "").strip()
-        box_group = row.get("box_group", "").strip()
-        item_code = row.get("item_code", "").strip()
-        name_ko = row.get("product_name_ko", "").strip()
-        name_en = row.get("product_name_en", "").strip()
-        origin_country = row.get("origin_country", "").strip()
+    with zipfile.ZipFile(out_mem, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for idx, r in df.iterrows():
+            row = {c: str(r.get(c, "")).strip() for c in REQUIRED_COLS}
 
-        if not brand or not box_type or not box_group or not item_code:
-            continue
+            # required check
+            missing = [k for k, v in row.items() if not str(v).strip()]
+            if missing:
+                failures.append((idx + 2, "필수 입력 누락", f"{missing}"))
+                continue
 
-        # template_key는 일관된 키로 coords 및 템플릿 매칭에 사용
-        template_key = f"{box_type}_{box_group}"
-        template_key_norm = template_key.lower()
+            try:
+                pdf_path = _render_single_pdf(row)
+                arcname = pdf_path.name
+                zf.writestr(arcname, pdf_path.read_bytes())
+            except Exception as e:
+                failures.append((idx + 2, "렌더링 실패", str(e)))
 
-        filename = safe_filename(f"{brand}_{template_key_norm}_{item_code}.pdf")
-        output_path = os.path.join(output_dir, filename)
+    out_mem.seek(0)
+    zip_name = f"output_{ts}.zip"
+    return out_mem, zip_name, failures
+
+
+# --------------------------
+# UI
+# --------------------------
+st.set_page_config(page_title="포장박스 인쇄 자동화", layout="wide")
+_ensure_prerequisites()
+
+st.title("포장박스 인쇄 자동화")
+
+tab_single, tab_upload = st.tabs(["개별 품목 입력", "엑셀 업로드(일괄등록)"])
+
+# -----------------------------
+# Tab 1: Single item
+# -----------------------------
+with tab_single:
+    left, right = st.columns([1, 1], gap="large")
+
+    brand_options = list(BRAND_NAME_KO.keys())
+
+    with left:
+        with st.form("single_item_form"):
+            st.subheader("입력")
+
+            brand = st.selectbox("brand", brand_options, format_func=lambda x: BRAND_NAME_KO.get(x, x))
+            template_options, _ = _scan_template_options(brand)
+
+            if not template_options:
+                st.warning(f"templates/{brand} 폴더에 PDF 템플릿이 없습니다.")
+                box_type_options = []
+                box_group_options = []
+            else:
+                # 템플릿 기반으로 box_type/box_group 옵션 생성 (오입력 방지)
+                bt = []
+                bg = []
+                for k in template_options:
+                    a, b = _split_template_key(k)
+                    if a:
+                        bt.append(a.upper())
+                    if b:
+                        bg.append(b.upper())
+                box_type_options = sorted(set(bt))
+                box_group_options = sorted(set(bg))
+
+            box_type = st.selectbox("box_type", box_type_options if box_type_options else [""])
+            box_group = st.selectbox("box_group", box_group_options if box_group_options else [""])
+
+            item_code = st.text_input("item_code")
+            product_name_ko = st.text_input("product_name_ko")
+            product_name_en = st.text_input("product_name_en")
+            origin_country = st.selectbox("origin_country", ORIGIN_OPTIONS)
+
+            st.caption("미리보기 (렌더링 전 입력값 확인)")
+            preview_df = pd.DataFrame(
+                [
+                    {
+                        "brand": brand,
+                        "box_type": box_type,
+                        "box_group": box_group,
+                        "item_code": item_code,
+                        "product_name_ko": product_name_ko,
+                        "product_name_en": product_name_en,
+                        "origin_country": origin_country,
+                    }
+                ],
+                columns=REQUIRED_COLS,
+            )
+            st.dataframe(preview_df, use_container_width=True)
+
+            run_manual = st.form_submit_button("실행(개별 입력)")
+
+    with right:
+        usage_col, manual_col = st.columns([1.2, 1], gap="large")
+
+        with usage_col:
+            st.subheader("사용법")
+            st.markdown(
+                """
+1. **brand** 선택  
+2. **item_code / 단품명(국문/영문) / 원산지** 입력  
+3. **box_type → box_group 선택 (템플릿 파일명 기준으로만 선택 가능)**  
+4. **실행(개별 입력)** 클릭 → PDF 다운로드  
+""",
+                unsafe_allow_html=True,
+            )
+
+            if TEMPLATE_TABLE_IMG.exists():
+                st.image(str(TEMPLATE_TABLE_IMG), caption="템플릿 기준표", use_container_width=True)
+
+        with manual_col:
+            st.subheader("브랜드 매뉴얼")
+            st.caption("포장 규격/박스 타입 확인 후 사용하세요.")
+
+            if not MANUALS_DIR.exists():
+                st.warning("assets/manuals 폴더가 없습니다.")
+            else:
+                for b in brand_options:
+                    manual_path = MANUALS_DIR / f"manual_{b}.pdf"
+                    brand_ko = BRAND_NAME_KO.get(b, b)
+
+                    row_text, row_btn = st.columns([6, 2], gap="small")
+                    with row_text:
+                        st.write(f"{brand_ko} 매뉴얼")
+                    with row_btn:
+                        if manual_path.exists():
+                            st.download_button(
+                                "다운로드",
+                                data=manual_path.read_bytes(),
+                                file_name=manual_path.name,
+                                mime="application/pdf",
+                                key=f"manual_{b}",
+                            )
+                        else:
+                            st.write("")
+
+    if run_manual:
+        required_values = {
+            "brand": brand,
+            "box_type": box_type,
+            "box_group": box_group,
+            "item_code": item_code,
+            "product_name_ko": product_name_ko,
+            "product_name_en": product_name_en,
+            "origin_country": origin_country,
+        }
+        missing = [k for k, v in required_values.items() if not str(v).strip()]
+        if missing:
+            st.error(f"필수 입력이 비어있습니다: {missing}")
+        else:
+            try:
+                with st.spinner("렌더링 중..."):
+                    pdf_path = _render_single_pdf(required_values)
+
+                if not pdf_path.exists():
+                    st.error("PDF 파일을 찾을 수 없습니다.")
+                else:
+                    st.success("완료: PDF 1개 생성")
+                    st.download_button(
+                        "PDF 다운로드",
+                        data=pdf_path.read_bytes(),
+                        file_name=pdf_path.name,
+                        mime="application/pdf",
+                    )
+            except Exception as e:
+                st.error(f"렌더링 실패: {e}")
+                st.code(traceback.format_exc())
+
+# -----------------------------
+# Tab 2: Excel upload
+# -----------------------------
+with tab_upload:
+    st.write("양식을 다운 받아 작성 후 box_data.xlsx 파일을 업로드하고 실행을 누르면 결과를 ZIP으로 다운로드할 수 있습니다.")
+
+    left_u, right_u = st.columns([1, 1], gap="large")
+
+    with left_u:
+        # ✅ 한 줄: 양식 다운로드 [다운로드]
+        tcol, bcol = st.columns([3, 1], gap="small")
+        with tcol:
+            st.markdown("**양식 다운로드**")
+        with bcol:
+            if BOX_DATA_TEMPLATE.exists():
+                st.download_button(
+                    "다운로드",
+                    data=BOX_DATA_TEMPLATE.read_bytes(),
+                    file_name=BOX_DATA_TEMPLATE.name,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            else:
+                st.warning("assets/forms/box_data.xlsx 파일이 없습니다.")
+
+        st.divider()
+
+        uploaded = st.file_uploader("box_data.xlsx 업로드", type=["xlsx"])
+
+        run_upload = st.button("실행(엑셀 업로드)", type="primary", disabled=(uploaded is None))
+
+    with right_u:
+        st.subheader("사용법")
+        st.markdown(
+            """
+1. **양식 다운로드** 후 작성  
+2. **box_data.xlsx 업로드**  
+3. **실행(엑셀 업로드)** 클릭  
+4. ZIP 다운로드  
+""",
+            unsafe_allow_html=True,
+        )
+
+    if run_upload and uploaded is not None:
+        ts = time.strftime("%Y%m%d_%H%M%S")
+        tmp_excel = TMP_DIR / f"box_data_{ts}.xlsx"
+        tmp_excel.write_bytes(uploaded.read())
 
         try:
-            run_render(
-                brand=brand,
-                template_key=template_key_norm,
-                item_code=item_code,
-                name_ko=name_ko,
-                name_en=name_en,
-                origin_country=origin_country,
-                output_path=output_path,
+            with st.spinner("일괄 렌더링 중..."):
+                zip_mem, zip_name, failures = _render_excel_to_zip(tmp_excel, ts)
+
+            st.success("완료: ZIP 생성")
+            st.download_button(
+                "ZIP 다운로드",
+                data=zip_mem.getvalue(),
+                file_name=zip_name,
+                mime="application/zip",
             )
-            success += 1
-            print(f"[OK] row {idx+2} → {output_path}")
+
+            if failures:
+                st.warning("일부 행이 실패했습니다.")
+                fail_df = pd.DataFrame(failures, columns=["excel_row", "type", "detail"])
+                st.dataframe(fail_df, use_container_width=True)
+
         except Exception as e:
-            fail += 1
-            print(f"[FAIL] row {idx+2} → {e}")
-
-    print(f"\n완료: 성공 {success}건 / 실패 {fail}건")
-
-
-# --------------------------------------------------
-# Main Entry
-# --------------------------------------------------
-
-if __name__ == "__main__":
-    # renderer.py 실행 시: box_data.xlsx 기반으로 output_pdf/에 일괄 생성
-    run_batch_from_excel()
+            st.error(f"실행 실패: {e}")
+            st.code(traceback.format_exc())
