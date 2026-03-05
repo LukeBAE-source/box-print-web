@@ -201,9 +201,11 @@ with right:
             manual_path = MANUALS_DIR / f"manual_{b}.pdf"
             brand_ko = BRAND_NAME_KO.get(b, b)
 
-            row_text, row_btn = st.columns([8,1], gap="small")
+            row_text, row_btn = st.columns([6,2], gap="small")
+
             with row_text:
                 st.markdown(f"{brand_ko} 포장박스 매뉴얼")
+
             with row_btn:
                 if manual_path.exists():
                     with open(manual_path, "rb") as f:
@@ -213,6 +215,7 @@ with right:
                             file_name=manual_path.name,
                             mime="application/pdf",
                             key=f"manual_{b}",
+                            use_container_width=True
                         )
                 else:
                     st.caption("없음")
