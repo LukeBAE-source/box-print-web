@@ -194,25 +194,31 @@ with right:
         )
 
     with manual_col:
-        st.subheader("브랜드 매뉴얼")
-        st.caption("다운로드해서 포장 규격/박스 타입 확인 후 사용하세요.")
+            st.subheader("브랜드 매뉴얼")
+            st.caption("다운로드해서 포장 규격/박스 타입 확인 후 사용하세요.")
 
-        for b in brand_options:
-            manual_path = MANUALS_DIR / f"manual_{b}.pdf"
-            brand_ko = BRAND_NAME_KO.get(b, b)
+            if not MANUALS_DIR.exists():
+                st.warning("assets/manuals 폴더가 없습니다.")
+            else:
+                for b in brand_options:
+                    manual_path = MANUALS_DIR / f"manual_{b}.pdf"
+                    brand_ko = BRAND_NAME_KO.get(b, b)
 
-            col1, col2 = st.columns([6, 2], gap="small")
-            with col1:
-                st.markdown(f"**{brand_ko} 포장박스 매뉴얼**")
-            with col2:
-                if manual_path.exists():
-                    with open(manual_path, "rb") as f:
-                        st.download_button(
-                            "다운로드",
-                            data=f,
-                            file_name=manual_path.name,
-                            mime="application/pdf",
-                            key=f"manual_{b}",
+                    # ✅ 버튼 줄바꿈 방지: 버튼 컬럼을 충분히 넓게 잡음
+                    row_l, row_r = st.columns([6, 2], gap="small")
+
+                    with row_l:
+                        st.markdown(f"**{brand_ko} 포장박스 매뉴얼**")
+
+                    with row_r:
+                        if manual_path.exists():
+                            with open(manual_path, "rb") as f:
+                                st.download_button(
+                                    "다운로드",
+                                    data=f,
+                                    file_name=manual_path.name,
+                                    mime="application/pdf",
+                                    key=f"manual_{b}",
                         )
                 else:
                     st.caption("없음")
