@@ -67,12 +67,12 @@ div.stDownloadButton > button{
   line-height: 1.1 !important;
   white-space: nowrap !important;
 
-  background-color: #3A4A63 !important;   /* 블루그레이 */
+  background-color: #3A4A63 !important;
   color: #FFFFFF !important;
   border: 1px solid #3A4A63 !important;
   border-radius: 6px !important;
 
-  font-weight: 700 !important;            /* 다운로드 굵게 */
+  font-weight: 700 !important;
 }
 
 /* hover */
