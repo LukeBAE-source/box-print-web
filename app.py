@@ -287,14 +287,12 @@ with right:
         st.subheader("사용법")
         st.markdown(
             """
-            1. **brand** 선택 (templates 폴더에 있는 브랜드만 표시)
+            1. **brand** 선택
             2. **item_code / 단품명(국문/영문) / 원산지** 입력
-            3. **box_type → box_group** 선택
+            3. **box_type → box_group** 선택(템플릿 기준표 참조)
             4. **실행(개별 입력)** 클릭 → PDF 다운로드
 
-            **주의**
-            - 템플릿 파일: `templates/<brand>/<box_type>_<box_group>.pdf`
-            - 좌표 파일: `coords/coords.json`
+            
             """
         )
 
