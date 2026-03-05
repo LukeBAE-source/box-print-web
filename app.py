@@ -201,10 +201,10 @@ with right:
             manual_path = MANUALS_DIR / f"manual_{b}.pdf"
             brand_ko = BRAND_NAME_KO.get(b, b)
 
-            col1, col2 = st.columns([6, 2], gap="small")
-            with col1:
-                st.markdown(f"**{brand_ko} 포장박스 매뉴얼**")
-            with col2:
+            row_text, row_btn = st.columns([8,1], gap="small")
+            with row_text:
+                st.markdown(f"{brand_ko} 포장박스 매뉴얼")
+            with row_btn:
                 if manual_path.exists():
                     with open(manual_path, "rb") as f:
                         st.download_button(
