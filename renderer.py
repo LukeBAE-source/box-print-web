@@ -1,7 +1,8 @@
 import os
 import re
 import json
-from typing import Dict, Any
+import glob
+from typing import Dict, Any, Tuple
 
 import pandas as pd
 from reportlab.pdfgen import canvas
@@ -124,6 +125,38 @@ def safe_filename(s: str) -> str:
     return s or "output"
 
 
+def find_template_path(template_root: str, brand_norm: str, template_key_norm: str) -> str:
+    """
+    templates/<brand>/*.pdf 중에서 파일명(확장자 제외)을
+    template_key와 '대소문자 무시'하여 매칭해 실제 경로를 반환한다.
+
+    - Streamlit Cloud(Linux)에서 BASIC_S.pdf vs basic_s.pdf 문제를 해결
+    - 혼용(예: Basic_S.pdf)도 정상 매칭
+    """
+    brand_dir = os.path.join(template_root, brand_norm)
+
+    if not os.path.isdir(brand_dir):
+        raise FileNotFoundError(f"템플릿 브랜드 폴더 없음: {os.path.abspath(brand_dir)}")
+
+    candidates = glob.glob(os.path.join(brand_dir, "*.pdf"))
+    if not candidates:
+        raise FileNotFoundError(f"템플릿 PDF 없음: {os.path.abspath(brand_dir)}")
+
+    target = normalize(template_key_norm)
+
+    for p in candidates:
+        stem = normalize(os.path.splitext(os.path.basename(p))[0])
+        if stem == target:
+            return p
+
+    # 디버깅용: 후보 일부 제공
+    sample = [os.path.basename(x) for x in sorted(candidates)[:30]]
+    raise FileNotFoundError(
+        f"템플릿 없음: {os.path.abspath(os.path.join(brand_dir, template_key_norm + '.pdf'))} "
+        f"(폴더 내 PDF 예시: {sample})"
+    )
+
+
 # --------------------------------------------------
 # Main render function
 # --------------------------------------------------
@@ -148,18 +181,14 @@ def run_render(
 
     cfg = coords[(b, t)]
 
-    template_path = os.path.join(TEMPLATE_ROOT, b, f"{t}.pdf")
-    if not os.path.exists(template_path):
-        raise FileNotFoundError(f"템플릿 없음: {os.path.abspath(template_path)}")
+    # [중요] 템플릿 파일명 대소문자 무시 매칭
+    template_path = find_template_path(TEMPLATE_ROOT, b, t)
 
     # output 폴더 보장
     out_dir = os.path.dirname(output_path) or "."
     os.makedirs(out_dir, exist_ok=True)
 
     abs_out = os.path.abspath(output_path)
-    print("CWD:", os.getcwd())
-    print("OUTPUT:", abs_out)
-
     overlay_path = output_path + ".overlay.pdf"
 
     try:
@@ -242,6 +271,7 @@ def run_render(
                 else:
                     c.drawImage(icon_path, x, y, rw, rh, preserveAspectRatio=True)
             else:
+                # 아이콘이 없으면 텍스트로 대체
                 c.setFont(FONT_MEDIUM_NAME, 8)
                 if do_rot:
                     draw_text_rotated_180(c, x, y, origin_country or "")
@@ -265,8 +295,6 @@ def run_render(
             raise RuntimeError(f"output 파일이 생성되지 않음: {abs_out}")
         if os.path.getsize(output_path) == 0:
             raise RuntimeError(f"output 파일 0바이트: {abs_out}")
-
-        print("SAVED:", abs_out, "size:", os.path.getsize(output_path))
 
     finally:
         if os.path.exists(overlay_path):
@@ -311,15 +339,17 @@ def run_batch_from_excel(excel_path="box_data.xlsx", output_dir="output_pdf"):
         if not brand or not box_type or not box_group or not item_code:
             continue
 
-        template_key = f"{box_type}_{box_group}".lower()
+        # template_key는 일관된 키로 coords 및 템플릿 매칭에 사용
+        template_key = f"{box_type}_{box_group}"
+        template_key_norm = template_key.lower()
 
-        filename = safe_filename(f"{brand}_{template_key}_{item_code}.pdf")
+        filename = safe_filename(f"{brand}_{template_key_norm}_{item_code}.pdf")
         output_path = os.path.join(output_dir, filename)
 
         try:
             run_render(
                 brand=brand,
-                template_key=template_key,
+                template_key=template_key_norm,
                 item_code=item_code,
                 name_ko=name_ko,
                 name_en=name_en,
