@@ -397,22 +397,21 @@ with tab_upload:
         st.markdown(
             """
 ### 업로드 방법
-1. **box_data.xlsx** 업로드  
-2. **실행(업로드)** 클릭  
-3. 완료 후 ZIP 다운로드  
+1. 좌측 **양식다운로드**(box_data.xlsx)
+2. 파일에 필요한 품목 정보 입력 후 저장(파일명은 box_data.xlsx 그대로)
+3. **box_data.xlsx** 업로드  
+4. **실행(업로드)** 클릭  
+5. 완료 후 ZIP 다운로드  
 
 ### 엑셀 필수 컬럼
-- brand  
-- box_type  
-- box_group  
-- item_code  
-- product_name_ko  
-- product_name_en  
-- origin_country  
+- brand(목록 선택)  
+- item_code(입력)  
+- product_name_ko(입력)  
+- product_name_en(입력)  
+- origin_country(목록선택)  
+- box_type(입력)  
+- box_group(입력)  
 
-### 주의사항
-- 템플릿: `templates/<brand>/<box_type>_<box_group>.pdf`
-- 좌표: `coords/coords.json`
-- 원산지 아이콘: `icons/icon_<origin>.png`
+
 """
         )
