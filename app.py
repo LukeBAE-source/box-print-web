@@ -13,6 +13,10 @@ PROJECT_DIR = Path(__file__).resolve().parent
 TMP_DIR = PROJECT_DIR / "_tmp_uploads"
 TMP_DIR.mkdir(exist_ok=True)
 
+# 템플릿 기준표 이미지
+ASSETS_DIR = PROJECT_DIR / "assets"
+TEMPLATE_TABLE_IMG = ASSETS_DIR / "template_table.png"
+
 # 프로젝트 폴더 구조 (Streamlit Cloud에서도 상대경로 기반으로 동작)
 TEMPLATES_DIR = PROJECT_DIR / "templates"
 COORDS_JSON = PROJECT_DIR / "coords" / "coords.json"
@@ -262,19 +266,26 @@ with tab_manual:
         run_manual = st.button("실행(개별 입력)", type="primary")
 
     with right:
-        st.subheader("사용법")
-        st.markdown(
-            """
-            1. **brand** 선택 (templates 폴더에 있는 브랜드만 표시)
-            2. **item_code / 단품명(국문/영문) / 원산지** 입력
-            3. **box_type → box_group** 선택
-            4. **실행(개별 입력)** 클릭 → PDF 다운로드
+    st.subheader("사용법")
+    st.markdown(
+        """
+        1. **brand** 선택 (templates 폴더에 있는 브랜드만 표시)
+        2. **item_code / 단품명(국문/영문) / 원산지** 입력
+        3. **box_type → box_group** 선택
+        4. **실행(개별 입력)** 클릭 → PDF 다운로드
 
-            **주의**
-            - 템플릿 파일: `templates/<brand>/<box_type>_<box_group>.pdf`
-            - 좌표 파일: `coords/coords.json`
-            """
-        )
+        
+        """
+    )
+
+    st.markdown("---")
+    st.subheader("템플릿 기준표")
+
+    if TEMPLATE_TABLE_IMG.exists():
+        st.image(str(TEMPLATE_TABLE_IMG), use_container_width=True)
+    else:
+        st.warning("assets/template_table.png 파일이 없습니다.")
+
 
     if run_manual:
         required_values = {
