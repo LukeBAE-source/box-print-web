@@ -326,8 +326,7 @@ with tab_manual:
                                     data=f,
                                     file_name=manual_path.name,
                                     mime="application/pdf",
-                                    key=f"manual_{b}",
-                                    use_container_width=True,
+                                    key=f"manual_{b}",                                    
                                 )
                         else:
                             st.caption("없음")
