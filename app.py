@@ -287,9 +287,7 @@ with tab_manual:
             3. **box_type → box_group** 선택
             4. **실행(개별 입력)** 클릭 → PDF 다운로드
 
-            **주의**
-            - 템플릿 파일: `templates/<brand>/<box_type>_<box_group>.pdf`
-            - 좌표 파일: `coords/coords.json`
+            
             """
         )
 
