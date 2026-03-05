@@ -279,6 +279,10 @@ with tab_manual:
         run_manual = st.button("실행(개별 입력)", type="primary")
 
     with right:
+    # ✅ 같은 행: (왼쪽) 사용법 / (오른쪽) 매뉴얼 다운로드 박스
+    usage_col, manual_col = st.columns([1.2, 1], gap="large")
+
+    with usage_col:
         st.subheader("사용법")
         st.markdown(
             """
@@ -291,52 +295,44 @@ with tab_manual:
             """
         )
 
-        # ✅ 빨간 박스 영역: 브랜드별 매뉴얼 표시/다운로드
-        st.markdown("---")
-        st.subheader("브랜드별 포장박스 매뉴얼")
-        st.caption("브랜드 매뉴얼을 다운로드하여 포장 규격과 박스 타입을 확인하세요.")
+    with manual_col:
+        st.subheader("브랜드 매뉴얼")
+        st.caption("다운로드해서 포장 규격/박스 타입 확인 후 사용하세요.")
 
-        st.markdown("**assets 폴더 업로드 규칙**")
-        st.code(
-            "assets/manuals/manual_<brand>.pdf\n"
-            "예) assets/manuals/manual_iloom.pdf",
-            language="text",
-        )
+        st.markdown("**assets 폴더 규칙**")
+        st.code("assets/manuals/manual_<brand>.pdf", language="text")
 
         if not MANUALS_DIR.exists():
-            st.warning("assets/manuals 폴더가 없습니다. GitHub에 폴더와 매뉴얼 파일을 올려주세요.")
+            st.warning("assets/manuals 폴더가 없습니다.")
         else:
-            # brand 선택 안 해도 전체 리스트를 보여줌(사용성 ↑)
-            any_found = False
+            # 원하는 형태: manual_xxx.pdf  [다운로드]
             for b in brand_options:
                 manual_path = MANUALS_DIR / f"manual_{b}.pdf"
-                st.write(f"- `{manual_path.name}`")
 
-                if manual_path.exists():
-                    any_found = True
-                    with open(manual_path, "rb") as f:
-                        st.download_button(
-                            label=f"{b} 매뉴얼 다운로드",
-                            data=f,
-                            file_name=manual_path.name,
-                            mime="application/pdf",
-                            use_container_width=True,
-                            key=f"dl_manual_{b}",
-                        )
-                else:
-                    st.caption(f"  (없음) assets/manuals에 `{manual_path.name}` 업로드 후 GitHub에 push 필요")
+                row_l, row_r = st.columns([2.2, 1], gap="small")
+                with row_l:
+                    st.markdown(f"`{manual_path.name}`")
+                with row_r:
+                    if manual_path.exists():
+                        with open(manual_path, "rb") as f:
+                            st.download_button(
+                                "다운로드",
+                                data=f,
+                                file_name=manual_path.name,
+                                mime="application/pdf",
+                                key=f"dl_manual_{b}",
+                                use_container_width=True,
+                            )
+                    else:
+                        st.caption("없음")
 
-            if not any_found:
-                st.info("매뉴얼 PDF가 아직 없습니다. assets/manuals 폴더에 manual_<brand>.pdf 형식으로 올려주세요.")
-
-        # ✅ 템플릿 기준표 이미지
-        st.markdown("---")
-        st.subheader("템플릿 기준표")
-
-        if TEMPLATE_TABLE_IMG.exists():
-            st.image(str(TEMPLATE_TABLE_IMG), use_container_width=True)
-        else:
-            st.warning("assets/template_table.png 파일이 없습니다.")
+    # ✅ 아래 줄에 템플릿 기준표
+    st.markdown("---")
+    st.subheader("템플릿 기준표")
+    if TEMPLATE_TABLE_IMG.exists():
+        st.image(str(TEMPLATE_TABLE_IMG), use_container_width=True)
+    else:
+        st.warning("assets/template_table.png 파일이 없습니다.")
 
     if run_manual:
         required_values = {
