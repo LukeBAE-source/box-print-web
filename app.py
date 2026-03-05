@@ -294,7 +294,7 @@ with tab_manual:
                 """
                 1. **brand** 선택
                 2. **item_code / 단품명(국문/영문) / 원산지** 입력
-                3. **box_type → box_group** 선택 (<span style="color:red;font-weight:700;">템플릿 기준표 참조</span>)**  
+                3. **box_type → box_group** 선택 (<span style="color:red;font-weight:700;">템플릿 기준표 참조</span>)
                 4. **실행(개별 입력)** 클릭 → PDF 다운로드
                 """,
                 unsafe_allow_html=True
