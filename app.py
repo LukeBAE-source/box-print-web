@@ -55,7 +55,45 @@ st.set_page_config(page_title="포장박스 인쇄 시안 자동화", layout="wi
 st.title("포장박스 인쇄 시안 자동화")
 
 # ✅ UI 정리용 CSS (버튼/텍스트/여백)
+# ✅ UI 정리용 CSS (버튼/텍스트/여백)
 st.markdown(
+    """
+<style>
+
+/* 다운로드 버튼: 크기 + 블루그레이 컬러 */
+div.stDownloadButton > button{
+  padding: 0.25rem 0.65rem !important;
+  font-size: 0.85rem !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+
+  background-color: #3A4A63 !important;   /* 블루그레이 */
+  color: #FFFFFF !important;
+  border: 1px solid #3A4A63 !important;
+  border-radius: 6px !important;
+
+  font-weight: 700 !important;            /* 다운로드 굵게 */
+}
+
+/* hover */
+div.stDownloadButton > button:hover{
+  background-color: #2E3B50 !important;
+  border-color: #2E3B50 !important;
+}
+
+</style>
+""",
+    unsafe_allow_html=True,
+)
+<style>
+/* 다운로드 버튼: 작게 + 줄바꿈 방지 */
+div.stDownloadButton > button{
+  padding: 0.25rem 0.65rem !important;
+  font-size: 0.85rem !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+}
+
     """
 <style>
 /* 다운로드 버튼: 작게 + 줄바꿈 방지 */
