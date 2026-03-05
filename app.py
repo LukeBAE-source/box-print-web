@@ -25,7 +25,7 @@ BRAND_NAME_KO = {
     "sloubed": "슬로우베드",
 }
 
-# 프로젝트 폴더 구조 (Streamlit Cloud에서도 상대경로 기반으로 동작)
+# 프로젝트 폴더 구조
 TEMPLATES_DIR = PROJECT_DIR / "templates"
 COORDS_JSON = PROJECT_DIR / "coords" / "coords.json"
 ICONS_DIR = PROJECT_DIR / "icons"
@@ -44,6 +44,22 @@ REQUIRED_COLS = [
 
 st.set_page_config(page_title="포장박스 인쇄 시안 자동화", layout="wide")
 st.title("포장박스 인쇄 시안 자동화")
+
+# ✅ 다운로드 버튼 작게 (padding/폰트 줄이기) + 줄바꿈 최소화
+st.markdown(
+    """
+    <style>
+    /* download_button 크기 줄이기 */
+    div.stDownloadButton > button {
+        padding: 0.25rem 0.6rem !important;
+        font-size: 0.85rem !important;
+        line-height: 1.1 !important;
+        white-space: nowrap !important;   /* 버튼 글자 줄바꿈 방지 */
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 tab_manual, tab_upload = st.tabs(["개별 품목 입력", "엑셀 업로드"])
 
@@ -84,15 +100,10 @@ def _scan_brand_templates():
 
 
 def _normalize_origin_for_icon_key(v: str) -> str:
-    # renderer.get_icon_path()는 공백 제거 후 lower 비교
     return "".join(str(v or "").split()).lower()
 
 
 def _render_single_pdf(row: dict, ts: str) -> Path:
-    """
-    row: REQUIRED_COLS를 포함하는 dict
-    output_pdf/<brand>_<templatekey>_<itemcode>.pdf 생성 후 Path 반환
-    """
     brand = str(row["brand"]).strip()
     box_type = str(row["box_type"]).strip()
     box_group = str(row["box_group"]).strip()
@@ -102,7 +113,6 @@ def _render_single_pdf(row: dict, ts: str) -> Path:
     origin_country = str(row["origin_country"]).strip()
 
     template_key = f"{box_type}_{box_group}".lower()
-
     filename = safe_filename(f"{brand}_{template_key}_{item_code}.pdf")
     output_path = OUT_DIR / filename
 
@@ -115,21 +125,16 @@ def _render_single_pdf(row: dict, ts: str) -> Path:
         origin_country=origin_country,
         output_path=str(output_path),
     )
-
     return output_path
 
 
 def _render_excel_to_zip(excel_path: Path, ts: str):
-    """
-    엑셀의 모든 행 렌더링 → zip 다운로드
-    """
     df = pd.read_excel(excel_path, dtype=str).fillna("")
     missing_cols = [c for c in REQUIRED_COLS if c not in df.columns]
     if missing_cols:
         st.error(f"엑셀 필수 컬럼 누락: {missing_cols}\n현재 컬럼: {list(df.columns)}")
         return
 
-    # 아이콘 매칭 사전 경고(없으면 renderer가 텍스트로 대체하지만 사용자에게 알려줌)
     try:
         icon_keys_norm = {
             _normalize_origin_for_icon_key(p.stem.replace("icon_", "", 1))
@@ -205,12 +210,8 @@ def _render_excel_to_zip(excel_path: Path, ts: str):
     )
 
 
-# -------------------------
-# 공통 필수 체크
-# -------------------------
+# ---- prerequisites
 _ensure_prerequisites()
-
-# 템플릿 스캔
 brand_options, brand_to_pairs = _scan_brand_templates()
 
 with tab_manual:
@@ -229,7 +230,6 @@ with tab_manual:
         product_name_ko = st.text_input("product_name_ko (단품명) - 입력", value="")
         product_name_en = st.text_input("product_name_en (단품명_영문) - 입력", value="")
 
-        # icons 폴더의 icon_*.png 기반 원산지 옵션
         icon_keys = sorted(
             [
                 p.stem.replace("icon_", "", 1)
@@ -286,7 +286,6 @@ with tab_manual:
         run_manual = st.button("실행(개별 입력)", type="primary")
 
     with right:
-        # 같은 행: 사용법 / 매뉴얼 다운로드(빨간 박스 위치)
         usage_col, manual_col = st.columns([1.2, 1], gap="large")
 
         with usage_col:
@@ -307,17 +306,16 @@ with tab_manual:
             if not MANUALS_DIR.exists():
                 st.warning("assets/manuals 폴더가 없습니다.")
             else:
-                # 원하는 형태:
-                # 일룸 포장박스 매뉴얼  [다운로드]
-                # 데스커 포장박스 매뉴얼 [다운로드]
-                # 슬로우베드 포장박스 매뉴얼 [다운로드]
                 for b in brand_options:
                     manual_path = MANUALS_DIR / f"manual_{b}.pdf"
                     brand_ko = BRAND_NAME_KO.get(b, b)
 
-                    row_l, row_r = st.columns([4, 1])
+                    # ✅ 버튼 줄바꿈 방지: 버튼 컬럼을 충분히 넓게 잡음
+                    row_l, row_r = st.columns([6, 2], gap="small")
+
                     with row_l:
                         st.markdown(f"**{brand_ko} 포장박스 매뉴얼**")
+
                     with row_r:
                         if manual_path.exists():
                             with open(manual_path, "rb") as f:
@@ -326,14 +324,13 @@ with tab_manual:
                                     data=f,
                                     file_name=manual_path.name,
                                     mime="application/pdf",
-                                    key=f"manual_{b}",                                    
+                                    key=f"manual_{b}",
                                 )
                         else:
                             st.caption("없음")
 
         st.markdown("---")
         st.subheader("템플릿 기준표")
-
         if TEMPLATE_TABLE_IMG.exists():
             st.image(str(TEMPLATE_TABLE_IMG), use_container_width=True)
         else:
