@@ -21,7 +21,7 @@ TEMPLATE_TABLE_IMG = ASSETS_DIR / "template_table.png"
 MANUALS_DIR = ASSETS_DIR / "manuals"
 
 FORMS_DIR = ASSETS_DIR / "forms"
-BOX_DATA_TEMPLATE = FORMS_DIR / "box_data.xlsx"  # ✅ 양식 다운로드 파일명
+BOX_DATA_TEMPLATE = FORMS_DIR / "box_data.xlsx"  # 양식 다운로드 파일
 
 TEMPLATES_DIR = PROJECT_DIR / "templates"
 COORDS_JSON = PROJECT_DIR / "coords" / "coords.json"
@@ -36,6 +36,7 @@ BRAND_NAME_KO = {
     "iloom": "일룸",
     "desker": "데스커",
     "sloubed": "슬로우베드",
+    # 필요 시 추가: "aloso": "알로소",
 }
 
 REQUIRED_COLS = [
@@ -54,53 +55,33 @@ REQUIRED_COLS = [
 st.set_page_config(page_title="포장박스 인쇄 시안 자동화", layout="wide")
 st.title("포장박스 인쇄 시안 자동화")
 
-# UI 스타일 (다운로드 버튼)
-st.markdown("""
-<style>
-/* 다운로드 버튼 스타일 */
-div.stDownloadButton > button {
-    padding: 0.25rem 0.65rem !important;
-    font-size: 0.85rem !important;
-    line-height: 1.1 !important;
-    white-space: nowrap !important;
-
-    background-color: #3A4A63 !important;   /* 블루그레이 */
-    color: #FFFFFF !important;
-    border: 1px solid #3A4A63 !important;
-    border-radius: 6px !important;
-
-    font-weight: 700 !important;
-}
-
-/* hover */
-div.stDownloadButton > button:hover {
-    background-color: #2E3B50 !important;
-    border-color: #2E3B50 !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-<style>
-/* 다운로드 버튼: 작게 + 줄바꿈 방지 */
-div.stDownloadButton > button{
-  padding: 0.25rem 0.65rem !important;
-  font-size: 0.85rem !important;
-  line-height: 1.1 !important;
-  white-space: nowrap !important;
-}
-
+# ✅ CSS는 반드시 "한 번만" 선언하세요 (중복 금지)
+st.markdown(
     """
 <style>
-/* 다운로드 버튼: 작게 + 줄바꿈 방지 */
+/* 다운로드 버튼(브랜드 매뉴얼 + 양식 다운로드): 블루그레이 + 굵게 + 줄바꿈 방지 */
 div.stDownloadButton > button{
   padding: 0.25rem 0.65rem !important;
   font-size: 0.85rem !important;
   line-height: 1.1 !important;
   white-space: nowrap !important;
-}
 
-/* 오른쪽 패널 타이틀 간격 */
-h3 { margin-bottom: 0.2rem !important; }
+  background-color: #3A4A63 !important;   /* 블루그레이 */
+  color: #FFFFFF !important;
+  border: 1px solid #3A4A63 !important;
+  border-radius: 6px !important;
+
+  font-weight: 700 !important;
+  box-shadow: none !important;
+}
+div.stDownloadButton > button:hover{
+  background-color: #2E3B50 !important;
+  border-color: #2E3B50 !important;
+}
+div.stDownloadButton > button:focus{
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(58,74,99,0.25) !important;
+}
 </style>
 """,
     unsafe_allow_html=True,
@@ -133,7 +114,7 @@ def _scan_brand_templates():
     for b in brand_options:
         pairs = set()
         for pdf in (TEMPLATES_DIR / b).glob("*.pdf"):
-            stem = pdf.stem
+            stem = pdf.stem  # 예: BASIC_M
             if "_" in stem:
                 bt, bg = stem.split("_", 1)
                 pairs.add((bt, bg))
@@ -203,7 +184,7 @@ def _render_excel_to_zip(excel_path: Path, ts: str):
     if not ok_paths:
         st.error("생성된 PDF가 없습니다. 템플릿/좌표/입력값을 확인하세요.")
         if fail_rows:
-            st.info("\n".join([f"- row {n}: {msg}" for n, msg in fail_rows[:30]]))
+            st.info("실패 내역(최대 30건):\n" + "\n".join([f"- row {n}: {msg}" for n, msg in fail_rows[:30]]))
         return
 
     zip_buffer = io.BytesIO()
@@ -230,7 +211,6 @@ def _render_excel_to_zip(excel_path: Path, ts: str):
 _ensure_prerequisites()
 brand_options, brand_to_pairs = _scan_brand_templates()
 
-
 # -----------------------------
 # Tab 1: Manual input
 # -----------------------------
@@ -238,7 +218,6 @@ with tab_manual:
     st.write("개별 품목 정보를 입력하면 PDF 1개를 생성하고 다운로드합니다.")
     left, right = st.columns([1, 1], gap="large")
 
-    # ---- Left: inputs
     with left:
         brand = st.selectbox(
             "brand (예: iloom, desker, sloubed) - 선택",
@@ -294,7 +273,6 @@ with tab_manual:
 
         run_manual = st.button("실행(개별 입력)", type="primary")
 
-    # ---- Right: usage + manuals + template table (all inside right)
     with right:
         usage_col, manual_col = st.columns([1.2, 1], gap="large")
 
@@ -322,7 +300,7 @@ with tab_manual:
                     brand_ko = BRAND_NAME_KO.get(b, b)
 
                     # ✅ 한 줄: "~매뉴얼" [다운로드]
-                    row_text, row_btn = st.columns([7, 3], gap="small")
+                    row_text, row_btn = st.columns([6, 2], gap="small")
                     with row_text:
                         st.markdown(f"{brand_ko} 포장박스 매뉴얼")
                     with row_btn:
@@ -346,7 +324,6 @@ with tab_manual:
         else:
             st.warning("assets/template_table.png 파일이 없습니다.")
 
-    # ---- Run manual
     if run_manual:
         required_values = {
             "brand": brand,
@@ -361,7 +338,6 @@ with tab_manual:
         if missing:
             st.error(f"필수 입력이 비어있습니다: {missing}")
         else:
-            ts = time.strftime("%Y%m%d_%H%M%S")
             try:
                 with st.spinner("렌더링 중..."):
                     pdf_path = _render_single_pdf(required_values)
@@ -378,7 +354,6 @@ with tab_manual:
                     )
             except Exception as e:
                 st.error(f"렌더링 실패: {e}")
-
 
 # -----------------------------
 # Tab 2: Excel upload
