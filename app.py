@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from renderer import run_render, safe_filename  # renderer.py에 safe_filename 존재 :contentReference[oaicite:3]{index=3}
+from renderer import run_render, safe_filename
 
 PROJECT_DIR = Path(__file__).resolve().parent
 TMP_DIR = PROJECT_DIR / "_tmp_uploads"
@@ -77,7 +77,7 @@ def _scan_brand_templates():
 
 
 def _normalize_origin_for_icon_key(v: str) -> str:
-    # renderer.get_icon_path()는 공백 제거 후 lower 비교 :contentReference[oaicite:4]{index=4}
+    # renderer.get_icon_path()는 공백 제거 후 lower 비교
     return "".join(str(v or "").split()).lower()
 
 
@@ -94,9 +94,10 @@ def _render_single_pdf(row: dict, ts: str) -> Path:
     name_en = str(row["product_name_en"]).strip()
     origin_country = str(row["origin_country"]).strip()
 
+    # template_key는 renderer에서 대소문자 무시 매칭하도록 수정되어 있어도
+    # coords 키는 lower 기준일 가능성이 높아 lower 유지
     template_key = f"{box_type}_{box_group}".lower()
 
-    # 파일명 안전화 (renderer.safe_filename 사용 :contentReference[oaicite:5]{index=5})
     filename = safe_filename(f"{brand}_{template_key}_{item_code}.pdf")
     output_path = OUT_DIR / filename
 
@@ -152,7 +153,12 @@ def _render_excel_to_zip(excel_path: Path, ts: str):
             row = {c: r.get(c, "") for c in REQUIRED_COLS}
 
             # 최소 필수값 체크(없으면 스킵 or 실패 처리)
-            if not str(row["brand"]).strip() or not str(row["box_type"]).strip() or not str(row["box_group"]).strip() or not str(row["item_code"]).strip():
+            if (
+                not str(row["brand"]).strip()
+                or not str(row["box_type"]).strip()
+                or not str(row["box_group"]).strip()
+                or not str(row["item_code"]).strip()
+            ):
                 fail_rows.append((i + 2, "필수값(brand/box_type/box_group/item_code) 누락"))
                 continue
 
@@ -217,11 +223,13 @@ with tab_manual:
         product_name_en = st.text_input("product_name_en (단품명_영문) - 입력", value="")
 
         # icons 폴더의 icon_*.png 기반 원산지 옵션
-        icon_keys = sorted([
-            p.stem.replace("icon_", "", 1)
-            for p in ICONS_DIR.glob("icon_*.png")
-            if p.is_file()
-        ])
+        icon_keys = sorted(
+            [
+                p.stem.replace("icon_", "", 1)
+                for p in ICONS_DIR.glob("icon_*.png")
+                if p.is_file()
+            ]
+        )
         origin_country = st.selectbox(
             "origin_country (원산지) - 선택",
             options=[""] + [k.upper() for k in icon_keys],
@@ -252,40 +260,46 @@ with tab_manual:
 
         preview = st.checkbox("미리보기(입력값 확인)", value=True)
         if preview:
-            preview_df = pd.DataFrame([{
-                "brand": brand,
-                "box_type": box_type,
-                "box_group": box_group,
-                "item_code": item_code,
-                "product_name_ko": product_name_ko,
-                "product_name_en": product_name_en,
-                "origin_country": origin_country,
-            }], columns=REQUIRED_COLS)
+            preview_df = pd.DataFrame(
+                [
+                    {
+                        "brand": brand,
+                        "box_type": box_type,
+                        "box_group": box_group,
+                        "item_code": item_code,
+                        "product_name_ko": product_name_ko,
+                        "product_name_en": product_name_en,
+                        "origin_country": origin_country,
+                    }
+                ],
+                columns=REQUIRED_COLS,
+            )
             st.dataframe(preview_df, use_container_width=True)
 
         run_manual = st.button("실행(개별 입력)", type="primary")
 
     with right:
-    st.subheader("사용법")
-    st.markdown(
-        """
-        1. **brand** 선택 (templates 폴더에 있는 브랜드만 표시)
-        2. **item_code / 단품명(국문/영문) / 원산지** 입력
-        3. **box_type → box_group** 선택
-        4. **실행(개별 입력)** 클릭 → PDF 다운로드
+        st.subheader("사용법")
+        st.markdown(
+            """
+            1. **brand** 선택 (templates 폴더에 있는 브랜드만 표시)
+            2. **item_code / 단품명(국문/영문) / 원산지** 입력
+            3. **box_type → box_group** 선택
+            4. **실행(개별 입력)** 클릭 → PDF 다운로드
 
-        
-        """
-    )
+            **주의**
+            - 템플릿 파일: `templates/<brand>/<box_type>_<box_group>.pdf`
+            - 좌표 파일: `coords/coords.json`
+            """
+        )
 
-    st.markdown("---")
-    st.subheader("템플릿 기준표")
+        st.markdown("---")
+        st.subheader("템플릿 기준표")
 
-    if TEMPLATE_TABLE_IMG.exists():
-        st.image(str(TEMPLATE_TABLE_IMG), use_container_width=True)
-    else:
-        st.warning("assets/template_table.png 파일이 없습니다.")
-
+        if TEMPLATE_TABLE_IMG.exists():
+            st.image(str(TEMPLATE_TABLE_IMG), use_container_width=True)
+        else:
+            st.warning("assets/template_table.png 파일이 없습니다.")
 
     if run_manual:
         required_values = {
