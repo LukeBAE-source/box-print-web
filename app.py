@@ -2,7 +2,6 @@
 import io
 import time
 import zipfile
-import traceback
 from pathlib import Path
 
 import pandas as pd
@@ -22,81 +21,106 @@ TEMPLATE_TABLE_IMG = ASSETS_DIR / "template_table.png"
 MANUALS_DIR = ASSETS_DIR / "manuals"
 
 FORMS_DIR = ASSETS_DIR / "forms"
-BOX_DATA_TEMPLATE = FORMS_DIR / "box_data.xlsx"
+BOX_DATA_TEMPLATE = FORMS_DIR / "box_data.xlsx"  # 양식 다운로드 파일
 
 TEMPLATES_DIR = PROJECT_DIR / "templates"
 COORDS_JSON = PROJECT_DIR / "coords" / "coords.json"
 ICONS_DIR = PROJECT_DIR / "icons"
-
 OUT_DIR = PROJECT_DIR / "output_pdf"
 OUT_DIR.mkdir(exist_ok=True)
 
-# --------------------------
-# Config
-# --------------------------
+# -----------------------------
+# Const
+# -----------------------------
 BRAND_NAME_KO = {
     "iloom": "일룸",
     "desker": "데스커",
-    "sloubed": "슬로우",
+    "sloubed": "슬로우베드",
+    # 필요 시 추가: "aloso": "알로소",
 }
 
 REQUIRED_COLS = [
     "brand",
-    "item_code",
-    "origin_country",
-    "product_name_ko",
-    "product_name_en",
     "box_type",
     "box_group",
+    "item_code",
+    "product_name_ko",
+    "product_name_en",
+    "origin_country",
 ]
 
-ORIGIN_OPTIONS = ["KOREA", "CHINA", "VIETNAM"]
+# -----------------------------
+# Page
+# -----------------------------
+st.set_page_config(page_title="포장박스 인쇄 시안 자동화", layout="wide")
+st.title("포장박스 인쇄 시안 자동화")
+
+# ✅ CSS는 반드시 "한 번만" 선언하세요 (중복 금지)
+st.markdown(
+    """
+<style>
+/* 다운로드 버튼(브랜드 매뉴얼 + 양식 다운로드): 블루그레이 + 굵게 + 줄바꿈 방지 */
+div.stDownloadButton > button{
+  padding: 0.25rem 0.65rem !important;
+  font-size: 0.85rem !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+
+  background-color: #3A4A63 !important;   /* 블루그레이 */
+  color: #FFFFFF !important;
+  border: 1px solid #3A4A63 !important;
+  border-radius: 6px !important;
+
+  font-weight: 700 !important;
+  box-shadow: none !important;
+}
+div.stDownloadButton > button:hover{
+  background-color: #2E3B50 !important;
+  border-color: #2E3B50 !important;
+}
+div.stDownloadButton > button:focus{
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(58,74,99,0.25) !important;
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+tab_manual, tab_upload = st.tabs(["개별 품목 입력", "엑셀 업로드"])
 
 
-# --------------------------
+# -----------------------------
 # Helpers
-# --------------------------
+# -----------------------------
 def _ensure_prerequisites():
-    missing = []
+    problems = []
     if not TEMPLATES_DIR.exists():
-        missing.append(f"templates 폴더 없음: {TEMPLATES_DIR}")
+        problems.append(f"templates 폴더가 없습니다: {TEMPLATES_DIR}")
     if not COORDS_JSON.exists():
-        missing.append(f"coords.json 없음: {COORDS_JSON}")
-    if not ICONS_DIR.exists():
-        # 아이콘은 없어도 텍스트 대체 가능하지만, 프로젝트 요구에 따라 막을지 선택
-        missing.append(f"icons 폴더 없음: {ICONS_DIR}")
-
-    if missing:
-        st.error("필수 리소스가 없습니다:\n\n- " + "\n- ".join(missing))
+        problems.append(f"coords.json 파일이 없습니다: {COORDS_JSON}")
+    if problems:
+        st.error("프로젝트 필수 파일/폴더가 누락되었습니다:\n- " + "\n- ".join(problems))
         st.stop()
 
 
-def _scan_template_options(brand: str):
-    brand = (brand or "").strip().lower()
-    brand_dir = TEMPLATES_DIR / brand
-    if not brand_dir.exists():
+def _scan_brand_templates():
+    if not TEMPLATES_DIR.exists():
         return [], {}
 
-    pdfs = list(brand_dir.glob("*.pdf"))
-    options = []
-    mapping = {}
-    for p in pdfs:
-        key = p.stem.strip()
-        if not key:
-            continue
-        options.append(key)
-        mapping[key.lower()] = key
+    brand_options = sorted([p.name for p in TEMPLATES_DIR.iterdir() if p.is_dir()])
+    brand_to_pairs = {}
 
-    options_sorted = sorted(set(options), key=lambda x: x.lower())
-    return options_sorted, mapping
+    for b in brand_options:
+        pairs = set()
+        for pdf in (TEMPLATES_DIR / b).glob("*.pdf"):
+            stem = pdf.stem  # 예: BASIC_M
+            if "_" in stem:
+                bt, bg = stem.split("_", 1)
+                pairs.add((bt, bg))
+        brand_to_pairs[b] = sorted(pairs)
 
-
-def _split_template_key(template_key: str):
-    s = (template_key or "").strip()
-    if "_" not in s:
-        return s, ""
-    a, b = s.split("_", 1)
-    return a, b
+    return brand_options, brand_to_pairs
 
 
 def _render_single_pdf(row: dict) -> Path:
@@ -126,145 +150,210 @@ def _render_single_pdf(row: dict) -> Path:
 
 def _render_excel_to_zip(excel_path: Path, ts: str):
     df = pd.read_excel(excel_path, dtype=str).fillna("")
-
     missing_cols = [c for c in REQUIRED_COLS if c not in df.columns]
     if missing_cols:
-        raise ValueError(f"엑셀에 필수 컬럼이 없습니다: {missing_cols}")
+        st.error(f"엑셀 필수 컬럼 누락: {missing_cols}\n현재 컬럼: {list(df.columns)}")
+        return
 
-    out_mem = io.BytesIO()
-    failures = []
+    ok_paths = []
+    fail_rows = []
 
-    with zipfile.ZipFile(out_mem, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for idx, r in df.iterrows():
-            row = {c: str(r.get(c, "")).strip() for c in REQUIRED_COLS}
-            missing = [k for k, v in row.items() if not str(v).strip()]
-            if missing:
-                failures.append((idx + 2, "필수 입력 누락", f"{missing}"))
+    with st.spinner("렌더링 중..."):
+        for i, r in df.iterrows():
+            row = {c: r.get(c, "") for c in REQUIRED_COLS}
+
+            # 최소 필수값 체크
+            if (
+                not str(row["brand"]).strip()
+                or not str(row["box_type"]).strip()
+                or not str(row["box_group"]).strip()
+                or not str(row["item_code"]).strip()
+            ):
+                fail_rows.append((i + 2, "필수값(brand/box_type/box_group/item_code) 누락"))
                 continue
 
             try:
-                pdf_path = _render_single_pdf(row)
-                zf.writestr(pdf_path.name, pdf_path.read_bytes())
+                p = _render_single_pdf(row)
+                if p.exists() and p.stat().st_size > 0:
+                    ok_paths.append(p)
+                else:
+                    fail_rows.append((i + 2, "PDF 생성 실패(파일 없음 또는 0바이트)"))
             except Exception as e:
-                failures.append((idx + 2, "렌더링 실패", str(e)))
+                fail_rows.append((i + 2, str(e)))
 
-    out_mem.seek(0)
-    zip_name = f"output_{ts}.zip"
-    return out_mem, zip_name, failures
+    if not ok_paths:
+        st.error("생성된 PDF가 없습니다. 템플릿/좌표/입력값을 확인하세요.")
+        if fail_rows:
+            st.info("실패 내역(최대 30건):\n" + "\n".join([f"- row {n}: {msg}" for n, msg in fail_rows[:30]]))
+        return
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for p in ok_paths:
+            zf.write(p, arcname=p.name)
+    zip_buffer.seek(0)
+
+    st.success(f"완료: {len(ok_paths)}개 PDF 생성")
+    if fail_rows:
+        st.warning("실패 내역(최대 30건):\n" + "\n".join([f"- row {n}: {msg}" for n, msg in fail_rows[:30]]))
+
+    st.download_button(
+        "결과 다운로드(zip)",
+        data=zip_buffer.getvalue(),
+        file_name=f"output_{ts}.zip",
+        mime="application/zip",
+    )
 
 
-# --------------------------
-# UI
-# --------------------------
-st.set_page_config(page_title="포장박스 인쇄 자동화", layout="wide")
+# -----------------------------
+# Init
+# -----------------------------
 _ensure_prerequisites()
-
-st.title("포장박스 인쇄 자동화")
-
-tab_single, tab_upload = st.tabs(["개별 품목 입력", "엑셀 업로드"])
+brand_options, brand_to_pairs = _scan_brand_templates()
 
 # -----------------------------
-# Tab 1: Single item
+# Tab 1: Manual input
 # -----------------------------
-with tab_single:
+with tab_manual:
+    st.write("개별 품목 정보를 입력하면 PDF 1개를 생성하고 다운로드합니다.")
     left, right = st.columns([1, 1], gap="large")
-    brand_options = list(BRAND_NAME_KO.keys())
 
     with left:
-        with st.form("single_item_form"):
-            st.subheader("입력")
+        brand = st.selectbox(
+            "brand (예: iloom, desker, sloubed) - 선택",
+            options=[""] + brand_options,
+            index=0,
+        )
 
-            brand = st.selectbox("brand", brand_options, format_func=lambda x: BRAND_NAME_KO.get(x, x))
-            template_options, _ = _scan_template_options(brand)
+        item_code = st.text_input("item_code (품목코드) - 입력", value="")
+        product_name_ko = st.text_input("product_name_ko (단품명) - 입력", value="")
+        product_name_en = st.text_input("product_name_en (단품명_영문) - 입력", value="")
 
-            if not template_options:
-                st.warning(f"templates/{brand} 폴더에 PDF 템플릿이 없습니다.")
-                box_type_options = [""]
-                box_group_options = [""]
-            else:
-                bt = []
-                bg = []
-                for k in template_options:
-                    a, b = _split_template_key(k)
-                    if a:
-                        bt.append(a.upper())
-                    if b:
-                        bg.append(b.upper())
-                box_type_options = sorted(set(bt)) or [""]
-                box_group_options = sorted(set(bg)) or [""]
+        icon_keys = sorted([p.stem.replace("icon_", "", 1) for p in ICONS_DIR.glob("icon_*.png") if p.is_file()])
+        origin_country = st.selectbox(
+            "origin_country (원산지) - 선택",
+            options=[""] + [k.upper() for k in icon_keys],
+            index=0,
+        )
 
-            box_type = st.selectbox("box_type", box_type_options)
-            box_group = st.selectbox("box_group", box_group_options)
+        pairs = brand_to_pairs.get(brand, []) if brand else []
+        box_type_options = sorted({bt for bt, _ in pairs})
+        box_type = st.selectbox(
+            "box_type (예: BASIC, PANEL 등) - 선택",
+            options=[""] + box_type_options,
+            index=0,
+            disabled=(not brand),
+        )
 
-            item_code = st.text_input("item_code")
-            product_name_ko = st.text_input("product_name_ko")
-            product_name_en = st.text_input("product_name_en")
-            origin_country = st.selectbox("origin_country", ORIGIN_OPTIONS)
+        box_group_options = sorted({bg for bt, bg in pairs if bt == box_type}) if (brand and box_type) else []
+        box_group = st.selectbox(
+            "box_group (예: M, S, MS 등) - 선택",
+            options=[""] + box_group_options,
+            index=0,
+            disabled=(not brand or not box_type),
+        )
 
-            run_manual = st.form_submit_button("실행(개별 입력)")
+        preview = st.checkbox("미리보기(입력값 확인)", value=True)
+        if preview:
+            preview_df = pd.DataFrame(
+                [
+                    {
+                        "brand": brand,
+                        "box_type": box_type,
+                        "box_group": box_group,
+                        "item_code": item_code,
+                        "product_name_ko": product_name_ko,
+                        "product_name_en": product_name_en,
+                        "origin_country": origin_country,
+                    }
+                ],
+                columns=REQUIRED_COLS,
+            )
+            st.dataframe(preview_df, use_container_width=True)
 
-        if run_manual:
-            required_values = {
-                "brand": brand,
-                "box_type": box_type,
-                "box_group": box_group,
-                "item_code": item_code,
-                "product_name_ko": product_name_ko,
-                "product_name_en": product_name_en,
-                "origin_country": origin_country,
-            }
-            missing = [k for k, v in required_values.items() if not str(v).strip()]
-            if missing:
-                st.error(f"필수 입력이 비어있습니다: {missing}")
-            else:
-                try:
-                    with st.spinner("렌더링 중..."):
-                        pdf_path = _render_single_pdf(required_values)
-
-                    if not pdf_path.exists():
-                        st.error("PDF 파일을 찾을 수 없습니다.")
-                    else:
-                        st.success("완료: PDF 1개 생성")
-                        st.download_button(
-                            "PDF 다운로드",
-                            data=pdf_path.read_bytes(),
-                            file_name=pdf_path.name,
-                            mime="application/pdf",
-                        )
-                except Exception as e:
-                    st.error(f"렌더링 실패: {e}")
-                    st.code(traceback.format_exc())
+        run_manual = st.button("실행(개별 입력)", type="primary")
 
     with right:
-        st.subheader("사용법")
-        st.markdown(
-            """
-1) brand 선택  
-2) box_type/box_group 선택  
-3) item_code, 단품명(국문/영문), 원산지 입력  
-4) 실행(개별 입력) → PDF 다운로드  
-"""
-        )
-        if TEMPLATE_TABLE_IMG.exists():
-            st.image(str(TEMPLATE_TABLE_IMG), caption="템플릿 기준표", use_container_width=True)
+        usage_col, manual_col = st.columns([1.2, 1], gap="large")
 
-        st.subheader("브랜드 매뉴얼")
-        if MANUALS_DIR.exists():
-            for b in brand_options:
-                manual_path = MANUALS_DIR / f"manual_{b}.pdf"
-                brand_ko = BRAND_NAME_KO.get(b, b)
-                row_text, row_btn = st.columns([6, 2], gap="small")
-                with row_text:
-                    st.write(f"{brand_ko} 매뉴얼")
-                with row_btn:
-                    if manual_path.exists():
-                        st.download_button(
-                            "다운로드",
-                            data=manual_path.read_bytes(),
-                            file_name=manual_path.name,
-                            mime="application/pdf",
-                            key=f"manual_{b}",
-                        )
+        with usage_col:
+            st.subheader("사용법")
+            st.markdown(
+                """
+1. **brand** 선택  
+2. **item_code / 단품명(국문/영문) / 원산지** 입력  
+3. **box_type → box_group 선택 (<span style="color:red;font-weight:700;">템플릿 기준표 참조</span>)**  
+4. **실행(개별 입력)** 클릭 → PDF 다운로드  
+""",
+                unsafe_allow_html=True,
+            )
+
+        with manual_col:
+            st.subheader("브랜드 매뉴얼")
+            st.caption("포장 규격/박스 타입 확인 후 사용하세요.")
+
+            if not MANUALS_DIR.exists():
+                st.warning("assets/manuals 폴더가 없습니다.")
+            else:
+                for b in brand_options:
+                    manual_path = MANUALS_DIR / f"manual_{b}.pdf"
+                    brand_ko = BRAND_NAME_KO.get(b, b)
+
+                    # ✅ 한 줄: "~매뉴얼" [다운로드]
+                    row_text, row_btn = st.columns([6, 2], gap="small")
+                    with row_text:
+                        st.markdown(f"{brand_ko} 포장박스 매뉴얼")
+                    with row_btn:
+                        if manual_path.exists():
+                            with open(manual_path, "rb") as f:
+                                st.download_button(
+                                    "다운로드",
+                                    data=f,
+                                    file_name=manual_path.name,
+                                    mime="application/pdf",
+                                    key=f"manual_{b}",
+                                    use_container_width=True,
+                                )
+                        else:
+                            st.caption("없음")
+
+        st.markdown("---")
+        st.subheader("템플릿 기준표")
+        if TEMPLATE_TABLE_IMG.exists():
+            st.image(str(TEMPLATE_TABLE_IMG), use_container_width=True)
+        else:
+            st.warning("assets/template_table.png 파일이 없습니다.")
+
+    if run_manual:
+        required_values = {
+            "brand": brand,
+            "box_type": box_type,
+            "box_group": box_group,
+            "item_code": item_code,
+            "product_name_ko": product_name_ko,
+            "product_name_en": product_name_en,
+            "origin_country": origin_country,
+        }
+        missing = [k for k, v in required_values.items() if not str(v).strip()]
+        if missing:
+            st.error(f"필수 입력이 비어있습니다: {missing}")
+        else:
+            try:
+                with st.spinner("렌더링 중..."):
+                    pdf_path = _render_single_pdf(required_values)
+
+                if not pdf_path.exists():
+                    st.error("PDF 파일을 찾을 수 없습니다.")
+                else:
+                    st.success("완료: PDF 1개 생성")
+                    st.download_button(
+                        "PDF 다운로드",
+                        data=pdf_path.read_bytes(),
+                        file_name=pdf_path.name,
+                        mime="application/pdf",
+                    )
+            except Exception as e:
+                st.error(f"렌더링 실패: {e}")
 
 # -----------------------------
 # Tab 2: Excel upload
@@ -272,46 +361,58 @@ with tab_single:
 with tab_upload:
     st.write("양식을 다운 받아 작성 후 box_data.xlsx 파일을 업로드하고 실행을 누르면 결과를 ZIP으로 다운로드할 수 있습니다.")
 
-    tcol, bcol = st.columns([3, 1], gap="small")
-    with tcol:
-        st.markdown("**양식 다운로드**")
-    with bcol:
-        if BOX_DATA_TEMPLATE.exists():
-            st.download_button(
-                "다운로드",
-                data=BOX_DATA_TEMPLATE.read_bytes(),
-                file_name=BOX_DATA_TEMPLATE.name,
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-        else:
-            st.warning("assets/forms/box_data.xlsx 파일이 없습니다.")
+    left_u, right_u = st.columns([1, 1], gap="large")
 
-    st.divider()
-    uploaded = st.file_uploader("box_data.xlsx 업로드", type=["xlsx"])
-    run_upload = st.button("실행(엑셀 업로드)", type="primary", disabled=(uploaded is None))
+    with left_u:
+        # ✅ 한 줄: 양식 다운로드 [다운로드]
+        tcol, bcol = st.columns([3, 1], gap="small")
+        with tcol:
+            st.markdown("**양식 다운로드**")
+        with bcol:
+            if BOX_DATA_TEMPLATE.exists():
+                with open(BOX_DATA_TEMPLATE, "rb") as f:
+                    st.download_button(
+                        "다운로드",
+                        data=f,
+                        file_name="box_data.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key="dl_box_data_template",
+                        use_container_width=True,
+                    )
+            else:
+                st.caption("없음")
 
-    if run_upload and uploaded is not None:
-        ts = time.strftime("%Y%m%d_%H%M%S")
-        tmp_excel = TMP_DIR / f"box_data_{ts}.xlsx"
-        tmp_excel.write_bytes(uploaded.read())
+        uploaded = st.file_uploader("box_data.xlsx 업로드", type=["xlsx"])
+        run_btn = st.button("실행(업로드)", type="primary", disabled=(uploaded is None))
 
-        try:
-            with st.spinner("일괄 렌더링 중..."):
-                zip_mem, zip_name, failures = _render_excel_to_zip(tmp_excel, ts)
+        if run_btn and uploaded is not None:
+            ts = time.strftime("%Y%m%d_%H%M%S")
+            excel_path = TMP_DIR / f"box_data_{ts}.xlsx"
+            with open(excel_path, "wb") as f:
+                f.write(uploaded.getbuffer())
+            _render_excel_to_zip(excel_path, ts)
 
-            st.success("완료: ZIP 생성")
-            st.download_button(
-                "ZIP 다운로드",
-                data=zip_mem.getvalue(),
-                file_name=zip_name,
-                mime="application/zip",
-            )
+    with right_u:
+        st.subheader("사용법")
+        st.markdown(
+            """
+### 업로드 방법
+1. **box_data.xlsx** 업로드  
+2. **실행(업로드)** 클릭  
+3. 완료 후 ZIP 다운로드  
 
-            if failures:
-                st.warning("일부 행이 실패했습니다.")
-                fail_df = pd.DataFrame(failures, columns=["excel_row", "type", "detail"])
-                st.dataframe(fail_df, use_container_width=True)
+### 엑셀 필수 컬럼
+- brand  
+- box_type  
+- box_group  
+- item_code  
+- product_name_ko  
+- product_name_en  
+- origin_country  
 
-        except Exception as e:
-            st.error(f"실행 실패: {e}")
-            st.code(traceback.format_exc())
+### 주의사항
+- 템플릿: `templates/<brand>/<box_type>_<box_group>.pdf`
+- 좌표: `coords/coords.json`
+- 원산지 아이콘: `icons/icon_<origin>.png`
+"""
+        )
