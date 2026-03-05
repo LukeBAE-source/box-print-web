@@ -273,6 +273,41 @@ with tab_manual:
 
         run_manual = st.button("실행(개별 입력)", type="primary")
 
+        # ✅ 결과(아웃풋) 영역: 실행 버튼 "바로 아래"에 표시되도록 left 컬럼 안에 배치
+        manual_output = st.container()
+
+        with manual_output:
+            if run_manual:
+                required_values = {
+                    "brand": brand,
+                    "box_type": box_type,
+                    "box_group": box_group,
+                    "item_code": item_code,
+                    "product_name_ko": product_name_ko,
+                    "product_name_en": product_name_en,
+                    "origin_country": origin_country,
+                }
+                missing = [k for k, v in required_values.items() if not str(v).strip()]
+                if missing:
+                    st.error(f"필수 입력이 비어있습니다: {missing}")
+                else:
+                    try:
+                        with st.spinner("렌더링 중..."):
+                            pdf_path = _render_single_pdf(required_values)
+
+                        if not pdf_path.exists():
+                            st.error("PDF 파일을 찾을 수 없습니다.")
+                        else:
+                            st.success("완료: PDF 1개 생성")
+                            st.download_button(
+                                "PDF 다운로드",
+                                data=pdf_path.read_bytes(),
+                                file_name=pdf_path.name,
+                                mime="application/pdf",
+                            )
+                    except Exception as e:
+                        st.error(f"렌더링 실패: {e}")
+
     with right:
         usage_col, manual_col = st.columns([1.2, 1], gap="large")
 
@@ -323,37 +358,6 @@ with tab_manual:
             st.image(str(TEMPLATE_TABLE_IMG), use_container_width=True)
         else:
             st.warning("assets/template_table.png 파일이 없습니다.")
-
-    if run_manual:
-        required_values = {
-            "brand": brand,
-            "box_type": box_type,
-            "box_group": box_group,
-            "item_code": item_code,
-            "product_name_ko": product_name_ko,
-            "product_name_en": product_name_en,
-            "origin_country": origin_country,
-        }
-        missing = [k for k, v in required_values.items() if not str(v).strip()]
-        if missing:
-            st.error(f"필수 입력이 비어있습니다: {missing}")
-        else:
-            try:
-                with st.spinner("렌더링 중..."):
-                    pdf_path = _render_single_pdf(required_values)
-
-                if not pdf_path.exists():
-                    st.error("PDF 파일을 찾을 수 없습니다.")
-                else:
-                    st.success("완료: PDF 1개 생성")
-                    st.download_button(
-                        "PDF 다운로드",
-                        data=pdf_path.read_bytes(),
-                        file_name=pdf_path.name,
-                        mime="application/pdf",
-                    )
-            except Exception as e:
-                st.error(f"렌더링 실패: {e}")
 
 # -----------------------------
 # Tab 2: Excel upload
@@ -411,7 +415,5 @@ with tab_upload:
 - origin_country(목록선택)  
 - box_type(입력)  
 - box_group(입력)  
-
-
 """
         )
