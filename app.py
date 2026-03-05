@@ -278,20 +278,23 @@ with tab_manual:
 
         run_manual = st.button("실행(개별 입력)", type="primary")
 
-    with right:
-    # ✅ 같은 행: (왼쪽) 사용법 / (오른쪽) 매뉴얼 다운로드 박스
+with right:
+
+    # 같은 행: 사용법 / 매뉴얼 다운로드
     usage_col, manual_col = st.columns([1.2, 1], gap="large")
 
     with usage_col:
         st.subheader("사용법")
         st.markdown(
             """
-            1. **brand** 선택
-            2. **item_code(품목코드) / 단품명(국문/영문) / 원산지** 입력
-            3. **box_type → box_group** 선택(템플릿 기준표 참고)
+            1. **brand** 선택 (templates 폴더에 있는 브랜드만 표시)
+            2. **item_code / 단품명(국문/영문) / 원산지** 입력
+            3. **box_type → box_group** 선택
             4. **실행(개별 입력)** 클릭 → PDF 다운로드
 
-
+            **주의**
+            - 템플릿 파일: `templates/<brand>/<box_type>_<box_group>.pdf`
+            - 좌표 파일: `coords/coords.json`
             """
         )
 
@@ -299,19 +302,17 @@ with tab_manual:
         st.subheader("브랜드 매뉴얼")
         st.caption("다운로드해서 포장 규격/박스 타입 확인 후 사용하세요.")
 
-        st.markdown("**assets 폴더 규칙**")
-        st.code("assets/manuals/manual_<brand>.pdf", language="text")
-
         if not MANUALS_DIR.exists():
             st.warning("assets/manuals 폴더가 없습니다.")
         else:
-            # 원하는 형태: manual_xxx.pdf  [다운로드]
             for b in brand_options:
                 manual_path = MANUALS_DIR / f"manual_{b}.pdf"
 
-                row_l, row_r = st.columns([2.2, 1], gap="small")
+                row_l, row_r = st.columns([2,1])
+
                 with row_l:
                     st.markdown(f"`{manual_path.name}`")
+
                 with row_r:
                     if manual_path.exists():
                         with open(manual_path, "rb") as f:
@@ -320,15 +321,14 @@ with tab_manual:
                                 data=f,
                                 file_name=manual_path.name,
                                 mime="application/pdf",
-                                key=f"dl_manual_{b}",
-                                use_container_width=True,
+                                key=f"manual_{b}"
                             )
                     else:
                         st.caption("없음")
 
-    # ✅ 아래 줄에 템플릿 기준표
     st.markdown("---")
     st.subheader("템플릿 기준표")
+
     if TEMPLATE_TABLE_IMG.exists():
         st.image(str(TEMPLATE_TABLE_IMG), use_container_width=True)
     else:
