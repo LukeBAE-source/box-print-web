@@ -13,9 +13,10 @@ PROJECT_DIR = Path(__file__).resolve().parent
 TMP_DIR = PROJECT_DIR / "_tmp_uploads"
 TMP_DIR.mkdir(exist_ok=True)
 
-# 템플릿 기준표 이미지
+# assets
 ASSETS_DIR = PROJECT_DIR / "assets"
 TEMPLATE_TABLE_IMG = ASSETS_DIR / "template_table.png"
+MANUALS_DIR = ASSETS_DIR / "manuals"
 
 # 프로젝트 폴더 구조 (Streamlit Cloud에서도 상대경로 기반으로 동작)
 TEMPLATES_DIR = PROJECT_DIR / "templates"
@@ -42,7 +43,6 @@ tab_manual, tab_upload = st.tabs(["개별 품목 입력", "엑셀 업로드"])
 
 def _ensure_prerequisites():
     problems = []
-
     if not TEMPLATES_DIR.exists():
         problems.append(f"templates 폴더가 없습니다: {TEMPLATES_DIR}")
     if not COORDS_JSON.exists():
@@ -94,8 +94,6 @@ def _render_single_pdf(row: dict, ts: str) -> Path:
     name_en = str(row["product_name_en"]).strip()
     origin_country = str(row["origin_country"]).strip()
 
-    # template_key는 renderer에서 대소문자 무시 매칭하도록 수정되어 있어도
-    # coords 키는 lower 기준일 가능성이 높아 lower 유지
     template_key = f"{box_type}_{box_group}".lower()
 
     filename = safe_filename(f"{brand}_{template_key}_{item_code}.pdf")
@@ -152,7 +150,6 @@ def _render_excel_to_zip(excel_path: Path, ts: str):
         for i, r in df.iterrows():
             row = {c: r.get(c, "") for c in REQUIRED_COLS}
 
-            # 최소 필수값 체크(없으면 스킵 or 실패 처리)
             if (
                 not str(row["brand"]).strip()
                 or not str(row["box_type"]).strip()
@@ -174,7 +171,10 @@ def _render_excel_to_zip(excel_path: Path, ts: str):
     if not ok_paths:
         st.error("생성된 PDF가 없습니다. 템플릿/좌표/입력값을 확인하세요.")
         if fail_rows:
-            st.info("실패 내역(엑셀 행 번호 기준):\n" + "\n".join([f"- row {n}: {msg}" for n, msg in fail_rows[:30]]))
+            st.info(
+                "실패 내역(엑셀 행 번호 기준):\n"
+                + "\n".join([f"- row {n}: {msg}" for n, msg in fail_rows[:30]])
+            )
         return
 
     zip_buffer = io.BytesIO()
@@ -282,15 +282,54 @@ with tab_manual:
         st.subheader("사용법")
         st.markdown(
             """
-            1. **brand** 선택 (templates 폴더에 있는 브랜드만 표시)
-            2. **item_code / 단품명(국문/영문) / 원산지** 입력
-            3. **box_type → box_group** 선택
+            1. **brand** 선택
+            2. **item_code(품목코드) / 단품명(국문/영문) / 원산지** 입력
+            3. **box_type → box_group** 선택(템플릿 기준표 참고)
             4. **실행(개별 입력)** 클릭 → PDF 다운로드
 
-            
+
             """
         )
 
+        # ✅ 빨간 박스 영역: 브랜드별 매뉴얼 표시/다운로드
+        st.markdown("---")
+        st.subheader("브랜드별 포장박스 매뉴얼")
+        st.caption("브랜드 매뉴얼을 다운로드하여 포장 규격과 박스 타입을 확인하세요.")
+
+        st.markdown("**assets 폴더 업로드 규칙**")
+        st.code(
+            "assets/manuals/manual_<brand>.pdf\n"
+            "예) assets/manuals/manual_iloom.pdf",
+            language="text",
+        )
+
+        if not MANUALS_DIR.exists():
+            st.warning("assets/manuals 폴더가 없습니다. GitHub에 폴더와 매뉴얼 파일을 올려주세요.")
+        else:
+            # brand 선택 안 해도 전체 리스트를 보여줌(사용성 ↑)
+            any_found = False
+            for b in brand_options:
+                manual_path = MANUALS_DIR / f"manual_{b}.pdf"
+                st.write(f"- `{manual_path.name}`")
+
+                if manual_path.exists():
+                    any_found = True
+                    with open(manual_path, "rb") as f:
+                        st.download_button(
+                            label=f"{b} 매뉴얼 다운로드",
+                            data=f,
+                            file_name=manual_path.name,
+                            mime="application/pdf",
+                            use_container_width=True,
+                            key=f"dl_manual_{b}",
+                        )
+                else:
+                    st.caption(f"  (없음) assets/manuals에 `{manual_path.name}` 업로드 후 GitHub에 push 필요")
+
+            if not any_found:
+                st.info("매뉴얼 PDF가 아직 없습니다. assets/manuals 폴더에 manual_<brand>.pdf 형식으로 올려주세요.")
+
+        # ✅ 템플릿 기준표 이미지
         st.markdown("---")
         st.subheader("템플릿 기준표")
 
