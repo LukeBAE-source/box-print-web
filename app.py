@@ -315,7 +315,7 @@ with tab_manual:
                     manual_path = MANUALS_DIR / f"manual_{b}.pdf"
                     brand_ko = BRAND_NAME_KO.get(b, b)
 
-                    row_l, row_r = st.columns([3, 1], gap="small")
+                    row_l, row_r = st.columns([4, 1])
                     with row_l:
                         st.markdown(f"**{brand_ko} 포장박스 매뉴얼**")
                     with row_r:
