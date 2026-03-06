@@ -319,6 +319,9 @@ with tab_manual:
 2. **item_code / 단품명(국문/영문) / 원산지** 입력  
 3. **box_type → box_group 선택 (<span style="color:red;font-weight:700;">템플릿 기준표 참조</span>)**  
 4. **실행(개별 입력)** 클릭 → PDF 다운로드  
+
+**주  의**
+품목별 인쇄 시안에 따라 인쇄 적용 시 가이드 간격(간격, 로고 사이즈 등)  준수
 """,
                 unsafe_allow_html=True,
             )
@@ -406,6 +409,9 @@ with tab_upload:
 3. **box_data.xlsx** 업로드  
 4. **실행(업로드)** 클릭  
 5. 완료 후 ZIP 다운로드  
+
+**주  의**
+품목별 인쇄 시안에 따라 인쇄 적용 시 가이드 간격(간격, 로고 사이즈 등)  준수
 
 ### 엑셀 필수 컬럼
 - brand(목록 선택)  
