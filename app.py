@@ -316,6 +316,7 @@ with tab_manual:
             st.markdown(
                 """
 1. **brand** 선택
+
    Select **brand**  
 2. **item_code / 단품명(국문/영문) / 원산지** 입력
 
@@ -331,6 +332,7 @@ with tab_manual:
 
 **주  의 / Caution**  
 품목별 인쇄 시안에 따라 인쇄 적용 시 가이드 간격(간격, 로고 사이즈 등)  준수
+
 Follow the guideline spacing (margins, logo size, etc.) when applying the print according to each item’s print design.
 
 """,
@@ -338,7 +340,7 @@ Follow the guideline spacing (margins, logo size, etc.) when applying the print 
             )
 
         with manual_col:
-            st.subheader("브랜드 매뉴얼")
+            st.subheader("브랜드 매뉴얼/Brand manual")
             st.caption("포장 규격/박스 타입 확인 후 사용하세요.")
 
             if not MANUALS_DIR.exists():
