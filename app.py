@@ -316,12 +316,16 @@ with tab_manual:
             st.markdown(
                 """
 1. **brand** 선택
+
    Select **brand**  
 2. **item_code / 단품명(국문/영문) / 원산지** 입력
+
    Enter **item code / product name (Korean/English) / country of origin**  
 3. **box_type → box_group 선택 (<span style="color:red;font-weight:700;">템플릿 기준표 참조</span>)**  
+
    **Select box_type → box_group (<span style="color:red;font-weight:700;">refer to the template reference table</span>)**
 4. **실행(개별 입력)** 클릭 → PDF 다운로드
+
    Click **Run (individual input)** → Download PDF  
 
 
