@@ -271,7 +271,7 @@ with tab_manual:
             )
             st.dataframe(preview_df, use_container_width=True)
 
-        run_manual = st.button("실행(개별 입력)", type="primary")
+        run_manual = st.button("실행(개별 입력)/Run (individual input)", type="primary")
 
         # ✅ 결과(아웃풋) 영역: 실행 버튼 "바로 아래"에 표시되도록 left 컬럼 안에 배치
         manual_output = st.container()
@@ -315,10 +315,14 @@ with tab_manual:
             st.subheader("사용법")
             st.markdown(
                 """
-1. **brand** 선택  
-2. **item_code / 단품명(국문/영문) / 원산지** 입력  
+1. **brand** 선택
+   Select **brand**  
+2. **item_code / 단품명(국문/영문) / 원산지** 입력
+   Enter **item code / product name (Korean/English) / country of origin**  
 3. **box_type → box_group 선택 (<span style="color:red;font-weight:700;">템플릿 기준표 참조</span>)**  
-4. **실행(개별 입력)** 클릭 → PDF 다운로드  
+   **Select box_type → box_group (<span style="color:red;font-weight:700;">refer to the template reference table</span>)**
+4. **실행(개별 입력)** 클릭 → PDF 다운로드
+   Click **Run (individual input)** → Download PDF  
 
 
 
