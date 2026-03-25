@@ -330,6 +330,7 @@ with tab_manual:
 
 
 
+
 **주  의 / Caution**  
 품목별 인쇄 시안에 따라 인쇄 적용 시 가이드 간격(간격, 로고 사이즈 등)  준수
 
@@ -340,8 +341,12 @@ Follow the guideline spacing (margins, logo size, etc.) when applying the print 
             )
 
         with manual_col:
-            st.subheader("브랜드 매뉴얼/Brand manual")
-            st.caption("포장 규격/박스 타입 확인 후 사용하세요.")
+            st.subheader("브랜드 매뉴얼
+
+Brand manual")
+            st.caption("포장 규격/박스 타입 확인 후 사용하세요.
+
+Please check the packaging specifications / box type before use")
 
             if not MANUALS_DIR.exists():
                 st.warning("assets/manuals 폴더가 없습니다.")
