@@ -341,10 +341,8 @@ Follow the guideline spacing (margins, logo size, etc.) when applying the print 
             )
 
         with manual_col:
-            st.subheader("브랜드 매뉴얼
-Brand manual")
-            st.caption("포장 규격/박스 타입 확인 후 사용하세요.
-Please check the packaging specifications / box type before use")
+            st.subheader("브랜드 매뉴얼 / Brand manual")
+            st.caption("포장 규격/박스 타입 확인 후 사용하세요. / Please check the packaging specifications / box type before use")
 
             if not MANUALS_DIR.exists():
                 st.warning("assets/manuals 폴더가 없습니다.")
@@ -356,7 +354,7 @@ Please check the packaging specifications / box type before use")
                     # ✅ 한 줄: "~매뉴얼" [다운로드]
                     row_text, row_btn = st.columns([6, 2], gap="small")
                     with row_text:
-                        st.markdown(f"{brand_ko} 포장박스 매뉴얼")
+                        st.markdown(f"{brand_ko/en} 포장박스 매뉴얼")
                     with row_btn:
                         if manual_path.exists():
                             with open(manual_path, "rb") as f:
