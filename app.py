@@ -342,10 +342,8 @@ Follow the guideline spacing (margins, logo size, etc.) when applying the print 
 
         with manual_col:
             st.subheader("브랜드 매뉴얼
-
 Brand manual")
             st.caption("포장 규격/박스 타입 확인 후 사용하세요.
-
 Please check the packaging specifications / box type before use")
 
             if not MANUALS_DIR.exists():
