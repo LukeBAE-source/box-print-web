@@ -354,7 +354,7 @@ Follow the guideline spacing (margins, logo size, etc.) when applying the print 
                     # ✅ 한 줄: "~매뉴얼" [다운로드]
                     row_text, row_btn = st.columns([6, 2], gap="small")
                     with row_text:
-                        st.markdown(f"{brand_ko/brand_en} 포장박스 매뉴얼")
+                        st.markdown(f"{brand_ko} 포장박스 매뉴얼")
                     with row_btn:
                         if manual_path.exists():
                             with open(manual_path, "rb") as f:
